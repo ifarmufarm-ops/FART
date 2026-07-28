@@ -1,0 +1,12 @@
+# Project place file
+/Test1.rbxlx
+
+# Roblox Studio lock files
+/*.rbxlx.lock
+/*.rbxl.lock
+
+sourcemap.json
+
+# Machine-specific Claude Code tool permissions. The ".local" suffix is the
+# convention for personal settings that should not be shared.
+.claude/settings.local.json
