@@ -128,8 +128,11 @@ local function buildRig(position: Vector3): Model
 	npcHumanoid.RigType = Enum.HumanoidRigType.R6
 	npcHumanoid.WalkSpeed = Config.BRAINROT_WALK_SPEED
 	npcHumanoid.HipHeight = 2
-	npcHumanoid.MaxHealth = math.huge
-	npcHumanoid.Health = math.huge
+	-- Large and finite rather than math.huge. Nothing can hurt it either way,
+	-- but infinities in Humanoid properties are a known source of odd engine
+	-- behaviour and buy nothing here.
+	npcHumanoid.MaxHealth = 1e6
+	npcHumanoid.Health = 1e6
 	npcHumanoid.BreakJointsOnDeath = false
 	npcHumanoid.Parent = rig
 

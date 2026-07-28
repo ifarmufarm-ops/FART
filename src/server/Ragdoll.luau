@@ -1,15 +1,24 @@
 --[[
 	Ragdoll -- turns a normal standing character into a floppy body, and back.
 
-	How it works, in plain terms: a Roblox character is held together by rigid
-	joints called Motor6Ds -- that is what keeps the arm attached to the
-	shoulder at a fixed angle. This switches every one of those rigid joints off
-	and puts a BallSocketConstraint alongside it, which is a joint that still
-	holds the limb on but lets it swing freely. The result is a body that flops
-	instead of standing.
+	THERE ARE TWO KINDS OF ROBLOX AVATAR and this file handles both. Which one
+	you get is decided by the engine, not by us, so neither path can be dropped.
+
+	  * Modern avatars (Roblox's "Avatar Joint Upgrade") have NO Motor6Ds at all.
+	    Limbs are physically held on by BallSocketConstraints, and posed by
+	    AnimationConstraints. Ragdolling one means switching those constraints
+	    out of KINEMATIC mode -- see step 1 in apply() for why that specific
+	    property is the whole ballgame, and why weakening their torque or
+	    disabling them outright does not work.
+
+	  * Classic avatars are held together by rigid Motor6Ds. Those get a
+	    swinging BallSocketConstraint added alongside and the motor switched off.
+
+	On any given character one of those two paths does all the work and the
+	other finds nothing to do.
 
 	Nobody is "killed" here -- health is never touched, exactly as the design
-	asks. The character is simply switched into physics mode and then thrown.
+	asks. The character is switched into physics mode and then thrown or shoved.
 
 	Ragdolling is REVERSIBLE. Nothing is destroyed, only disabled, and every
 	original value is remembered -- so recover() can stand a player back up.
@@ -82,6 +91,8 @@ type Record = {
 	added: { Instance },
 	collide: { [BasePart]: boolean },
 	animate: BaseScript?,
+	requiresNeck: boolean?,
+	breakJointsOnDeath: boolean?,
 }
 
 -- How far a joint may bend while limp. The avatar's own joints are limited to
@@ -113,11 +124,15 @@ function Ragdoll.apply(character: Model): boolean
 	active[character] = record
 
 	-- Roblox kills a character if its neck joint disappears while this is on,
-	-- and we are about to replace the neck joint. So: off first.
+	-- and we are about to replace the neck joint. So: off first, remembering
+	-- the originals -- recover() undoes everything apply() touches, and these
+	-- are no exception.
 	pcall(function()
+		record.requiresNeck = humanoid.RequiresNeck
 		humanoid.RequiresNeck = false
 	end)
 	pcall(function()
+		record.breakJointsOnDeath = humanoid.BreakJointsOnDeath
 		humanoid.BreakJointsOnDeath = false
 	end)
 
@@ -341,6 +356,16 @@ function Ragdoll.recover(character: Model): boolean
 		humanoid.PlatformStand = false
 		humanoid.AutoRotate = true
 		humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, true)
+		if record.requiresNeck ~= nil then
+			pcall(function()
+				humanoid.RequiresNeck = record.requiresNeck
+			end)
+		end
+		if record.breakJointsOnDeath ~= nil then
+			pcall(function()
+				humanoid.BreakJointsOnDeath = record.breakJointsOnDeath
+			end)
+		end
 	end
 
 	-- Stand them back up explicitly rather than trusting the Humanoid to do it.
@@ -393,7 +418,9 @@ function Ragdoll.shove(character: Model, direction: Vector3, power: number)
 	end
 	local velocity = flat.Unit * power + Vector3.new(0, power * 0.35, 0)
 
-	for _, part in character:GetChildren() do
+	-- Descendants, not children, so hats and other accessories travel with the
+	-- body rather than being left hanging in the air.
+	for _, part in character:GetDescendants() do
 		if part:IsA("BasePart") then
 			part.AssemblyLinearVelocity = velocity
 		end
