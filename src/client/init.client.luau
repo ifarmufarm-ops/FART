@@ -555,13 +555,13 @@ RunService.RenderStepped:Connect(function(deltaTime)
 		-- the ghost area. Offering it to a living player would be an escape
 		-- from the bomb, and the server refuses it anyway.
 		leaveButton.Visible = not iAmAlive
-		leaveButton.Text = "Back to the lobby"
+		leaveButton.Text = "Back to lobby"
 	else
 		-- Between rounds -- the free-for-all in the arena, or waiting in the
 		-- queue. Anyone who has asked to play can drop out here, and the wording
 		-- says what it actually does: takes you out of the coming round.
 		leaveButton.Visible = state.queued == true
-		leaveButton.Text = "Leave round"
+		leaveButton.Text = "Back to lobby"
 	end
 
 	if not hasBody then

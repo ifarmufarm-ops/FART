@@ -55,6 +55,27 @@ Config.GHOST_SPAWN_COUNT = 8
 -- as "not really here", low enough that you can still see each other.
 Config.GHOST_TRANSPARENCY = 0.65
 
+-- THE PUNCHING BAG. A meme-faced thing standing in the middle of the ghost
+-- platform that you hit to pass the time while waiting for the round to end.
+-- It counts every punch it has taken.
+
+Config.CLICKER_CLICK_DISTANCE = 26 -- how close you must be to hit it, in studs
+
+-- How far the thump carries. Deliberately short: it should be audible to the
+-- ghosts standing around it and to nobody in the arena 130 studs below.
+Config.CLICKER_SOUND_RANGE = 55
+
+-- PLACEHOLDER -- swap for a proper thump. Roblox ships no punch noise, so this
+-- is a stand-in purely so the thing is testable today.
+Config.CLICKER_SOUND = "rbxasset://sounds/switch3.wav"
+
+-- How far it rocks back when hit, in degrees, and how long the recoil takes.
+-- The return is deliberately slower than the hit, which is what makes it read
+-- as being knocked back rather than just wobbling.
+Config.CLICKER_RECOIL_ANGLE = 18
+Config.CLICKER_RECOIL_TIME = 0.06
+Config.CLICKER_RECOVER_TIME = 0.22
+
 --=============================================================================
 -- THE BOMB TIMER
 --=============================================================================

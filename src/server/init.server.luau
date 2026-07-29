@@ -23,6 +23,7 @@ local AbilityService = require(script.AbilityService)
 local Arena = require(script.Arena)
 local Bomb = require(script.Bomb)
 local GhostArea = require(script.GhostArea)
+local GhostClicker = require(script.GhostClicker)
 local Lobby = require(script.Lobby)
 local Modifiers = require(script.Modifiers)
 local Queue = require(script.Queue)
@@ -33,6 +34,7 @@ Ragdoll.setupCollisionGroups()
 Arena.build()
 Lobby.build()
 GhostArea.build() -- the glass platform knocked-out players watch from
+GhostClicker.build() -- and the thing they punch while they are up there
 Queue.build() -- the pad sits on the lobby's plinth, so build it after the lobby
 Bomb.create()
 
@@ -78,6 +80,10 @@ RoundManager.setQueueCheck(Queue.isQueued)
 
 -- Where you go when you are blown up, and how you come back.
 RoundManager.setGhostHandlers(GhostArea.send, GhostArea.restore)
+
+-- Only ghosts may punch the thing on the platform. A ClickDetector fires for
+-- anybody who can reach it, so the rule has to be checked on the server.
+GhostClicker.setPunchCheck(GhostArea.isGhost)
 
 Queue.start()
 
