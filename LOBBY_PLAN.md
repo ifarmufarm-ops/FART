@@ -76,6 +76,25 @@ the event HUD until they are returned to the lobby.
 
 ---
 
+## Stage 1 — COMPLETE (2026-07-29)
+
+All of it is built. What actually shipped differs from the plan below in three
+ways worth knowing:
+
+- **There is no "return to the lobby at round end".** Playtesting turned that
+  into the opposite: everybody respawns in the ARENA for a free-for-all between
+  rounds, with the pickups still running, because that gap is the best chance a
+  new player gets to learn the abilities. The lobby is for people who have
+  chosen to stop playing.
+- **The spectator camera is gone**, replaced by a ghost area: a glass platform
+  above the arena where knocked-out players keep a body, turn see-through, and
+  watch the round through the floor. There is a punching bag up there.
+- **The practice range is its own file** rather than a generalised `TestRange`.
+  Making that one support two live instances was more machinery than eighty
+  lines of pedestals justified.
+
+The original plan follows, for the reasoning behind each decision.
+
 ## Stage 1 — the work
 
 Playable outcome: spawn in a lobby, touch a pad to queue, roam freely, get pulled

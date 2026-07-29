@@ -26,6 +26,7 @@ local GhostArea = require(script.GhostArea)
 local GhostClicker = require(script.GhostClicker)
 local Lobby = require(script.Lobby)
 local Modifiers = require(script.Modifiers)
+local PracticeRange = require(script.PracticeRange)
 local Queue = require(script.Queue)
 local Ragdoll = require(script.Ragdoll)
 local RoundManager = require(script.RoundManager)
@@ -86,6 +87,11 @@ RoundManager.setGhostHandlers(GhostArea.send, GhostArea.restore)
 GhostClicker.setPunchCheck(GhostArea.isGhost)
 
 Queue.start()
+
+-- The lobby's practice range: abilities only, always available. The eligibility
+-- check above is what makes it actually work -- without it every ability used
+-- here would be silently thrown away.
+PracticeRange.start()
 
 -- Beacon events reach the round and nothing else. Tiny Mode and Reverse
 -- Controls are scoped by this; Ice Shoes was already safe, because it freezes

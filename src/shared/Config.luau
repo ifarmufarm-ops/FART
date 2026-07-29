@@ -225,6 +225,13 @@ Config.LOBBY_SPAWN_COUNT = 8 -- pads in the ring players appear on
 -- pressed Reset in the lobby would never come back.
 Config.LOBBY_RESPAWN_CHECK = 1
 
+-- THE PRACTICE RANGE. A row of abilities along one wall of the lobby that you
+-- can pick up and use as much as you like while you wait. Abilities ONLY --
+-- never beacons, because a beacon changes the map for everybody in the round
+-- and somebody idly messing about in the lobby must not be able to do that.
+Config.PRACTICE_RANGE_SPACING = 12 -- gap between pedestals, in studs
+Config.PRACTICE_RESPAWN_DELAY = 2 -- how quickly one comes back after you take it
+
 -- THE QUEUE PAD. Stepping onto it puts you in the next round; stepping onto it
 -- again takes you back out. You have to step OFF and back ON to toggle, so
 -- standing on it does not flicker you in and out.

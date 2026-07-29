@@ -150,6 +150,9 @@ You would also need to name the model `Arena`, add SpawnLocations, and update
 | `src/server/BrainRot.luau` | The hunting NPC |
 | `src/server/Lobby.luau` | The lobby: where you are when you are not in a round |
 | `src/server/Queue.luau` | The queue pad, and who has asked to play |
+| `src/server/PracticeRange.luau` | The lobby's abilities-only practice row |
+| `src/server/GhostArea.luau` | The glass platform you watch from once you are out |
+| `src/server/GhostClicker.luau` | The punching bag up there |
 | `src/server/TestRange.luau` | The Test Mode showcase row |
 | `src/client/init.client.luau` | The heads-up display and spectator camera |
 | `src/client/AbilityInput.luau` | The ability button, on all three platforms |
@@ -171,6 +174,20 @@ so moving between them is instant, with no loading screen and no second server.
 
 The server refuses that button for anyone still alive, so it can never be used
 to escape the bomb.
+
+**A practice row** along one lobby wall holds one of each ability, respawning
+straight away. Abilities only, never beacons -- a beacon changes the map for
+everyone in the round, and somebody messing about in the lobby must not reach
+into a game they are not playing.
+
+**Once you are blown up** you go to a glass-floored platform above the arena as
+a see-through ghost, where you can walk about, watch the round finish through
+the floor, and punch a meme-faced thing that counts how many times it has been
+hit. You keep a real body the whole time.
+
+**Between rounds everybody comes back into the arena** for a free-for-all --
+bodies, pickups, no bomb -- until the next countdown ends. That gap is the main
+chance a new player gets to work out what the abilities do.
 
 The lobby floor deliberately does **not** carry the `HotPotatoFloor` tag. That
 tag is what Ice Shoes freezes, and it has no idea which building you are
