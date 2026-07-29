@@ -148,19 +148,52 @@ You would also need to name the model `Arena`, add SpawnLocations, and update
 | `src/server/AbilityService.luau` | Who is carrying what, and whether they may use it |
 | `src/server/Modifiers.luau` | The beacon events that change the map |
 | `src/server/BrainRot.luau` | The hunting NPC |
+| `src/server/Lobby.luau` | The lobby: where you are when you are not in a round |
+| `src/server/Queue.luau` | The queue pad, and who has asked to play |
 | `src/server/TestRange.luau` | The Test Mode showcase row |
 | `src/client/init.client.luau` | The heads-up display and spectator camera |
 | `src/client/AbilityInput.luau` | The ability button, on all three platforms |
 | `src/client/ScreenEffects.luau` | Beacon visuals and the reverse-controls override |
 
+## The lobby
+
+Everyone joins into a **lobby**, 600 studs from the arena in the same place --
+so moving between them is instant, with no loading screen and no second server.
+
+- **Step on the pad in the middle to play.** Nothing happens until you do. Step
+  on it again to drop out. Walking away does not un-queue you.
+- **Queueing is sticky.** You stay in round after round without re-joining.
+- **Only queued players are pulled into the arena.** Everyone else carries on in
+  the lobby, untouched by the bomb, and sees none of the round's HUD.
+- **Blown up? You can leave.** A "Back to the lobby" button appears once your
+  body is gone. It also takes you out of the queue, so you will not be dragged
+  into the next round -- step back on the pad when you want in again.
+
+The server refuses that button for anyone still alive, so it can never be used
+to escape the bomb.
+
+The lobby floor deliberately does **not** carry the `HotPotatoFloor` tag. That
+tag is what Ice Shoes freezes, and it has no idea which building you are
+standing in -- tagging the lobby would ice it every time someone in the arena
+grabbed the beacon.
+
+To look at the lobby in Edit mode, the same trick as the arena:
+
+```bash
+require(game.ServerScriptService.Server.Lobby).preview()
+```
+
 ## How a round works
 
 ```
-Waiting        not enough players yet
-Intermission   8 second countdown, everyone gets a fresh character
-Playing        the bomb cycles until one player is left
-RoundOver      winner shown for 6 seconds, then back to Intermission
+Waiting        not enough players in the QUEUE yet
+Intermission   16 second countdown -- also the window to join
+Playing        queued players are moved to the arena, bomb cycles until one left
+RoundOver      winner shown for 10 seconds, then back to Intermission
 ```
+
+A round takes **the queue**, not everyone in the server. Anyone who has not
+stepped on the pad stays in the lobby and is left completely alone by it.
 
 Inside **Playing**:
 
@@ -235,6 +268,20 @@ this project was verified by running it and measuring; these were not.
   unknown.
 - Reverse Controls exempting the activator. The rule is verified by driving
   `Humanoid:Move` directly; it has never run with two real players.
+
+**The whole lobby stage needs two clients to confirm.** Everything below is
+built and verified server-side, and none of it has been seen working with a
+real second player:
+
+- A lobby player seeing **none** of a running round's HUD. This is the entire
+  point of the message scoping, and it cannot be checked with one client.
+- A non-queued player being left completely alone while a round runs.
+- The "Back to the lobby" button **appearing at all**. Its visibility runs on
+  `RenderStepped`, which fires zero times in a headless Studio session, so
+  nobody has ever seen it on screen.
+- Beacon isolation. Ice, Tiny and Reverse Controls are expected to leak into
+  the lobby until stage 1d scopes them, and **Low Gravity certainly will** --
+  `workspace.Gravity` is a single global property. See `LOBBY_PLAN.md`.
 - The Brain Rot NPC choosing between several possible victims.
 
 **Needs real hardware:**

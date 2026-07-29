@@ -45,6 +45,16 @@ The dials that decide how long a round lasts and how it accelerates.
 | `INTERMISSION_SECONDS` | 16s | Countdown before a round starts — and **the window to join**. Anyone who reaches the queue pad before it runs out is in |
 | `ROUND_OVER_SECONDS` | 10s | How long the winner is shown before the next countdown begins |
 
+## The lobby and the queue
+
+| Dial | Now | What it does |
+|---|---|---|
+| `LOBBY_CENTER` | (0, 2, 600) | How far the lobby sits from the arena. Far enough that nothing in one can reach the other |
+| `LOBBY_SIZE` | 110 studs | How much room there is to roam between rounds |
+| `LOBBY_SPAWN_COUNT` | 8 | Pads in the ring players appear on |
+| `QUEUE_PAD_RADIUS` | 7 studs | How close you must get to the pad to join or leave |
+| `LOBBY_RESPAWN_CHECK` | 1s | How quickly somebody who lost their body gets it back. **Not** cosmetic — the game hands out every body itself, so without this you would stay bodyless |
+
 ## Passing
 
 | Dial | Now | What it does |
