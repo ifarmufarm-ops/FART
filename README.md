@@ -136,7 +136,8 @@ You would also need to name the model `Arena`, add SpawnLocations, and update
 
 | File | What it does |
 |---|---|
-| `src/shared/Config.luau` | **Every number worth tuning.** Start here. |
+| `BALANCE.md` | **The dials that change how the game plays.** Start here to tune |
+| `src/shared/Config.luau` | Every number, with the full reasoning beside each one |
 | `src/shared/Abilities.luau` | The catalogue of every pickup and how often it spawns |
 | `src/shared/Remotes.luau` | The channels the server uses to update screens |
 | `src/server/RoundManager.luau` | All the rules: timers, passing, elimination |
@@ -178,12 +179,15 @@ are swapped for swinging ones and the body is thrown. Health is never touched.
 
 ## Things you might want to change first
 
-All in `src/shared/Config.luau`:
+See **`BALANCE.md`** -- the curated list of the ~25 numbers that change how the
+game plays, grouped by what they affect, with a "if it feels wrong, start here"
+table and a log of what has been changed and why.
 
-- `TIMER_START`, `TIMER_DECAY_PER_PASS`, `TIMER_MINIMUM` -- the pace of a round
+The quickest four:
+
+- `TIMER_START` -- the pace of a round, and the biggest single dial
 - `PASS_RADIUS` -- how close you must get to pass it (5 studs is about arm's length)
 - `LAUNCH_SPEED` -- how far the exploded player flies
-- `ARENA_SIZE` -- how big the map is
 - `MIN_PLAYERS` -- how many players a real round needs
 
 ## Known trade-off — confirmed, and fixed
