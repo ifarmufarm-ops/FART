@@ -43,7 +43,8 @@ The dials that decide how long a round lasts and how it accelerates.
 | `RESET_TIMER_AFTER_EXPLOSION` | `true` | `true` = every cycle starts fresh at 15s. `false` = it keeps shrinking all round, so late rounds are brutal |
 | `MIN_PLAYERS` | 2 | How many are needed for a real round |
 | `INTERMISSION_SECONDS` | 16s | Countdown before a round starts — and **the window to join**. Anyone who reaches the queue pad before it runs out is in |
-| `ROUND_OVER_SECONDS` | 10s | How long the winner is shown before the next countdown begins |
+| `ROUND_OVER_SECONDS` | 6s | How long the winner is shown before the next countdown. The map stays live through it, so the winner can run around with whatever is left |
+| `ROUND_CLEANUP_LEAD` | 0.75s | How long before that ends the pickups are tidied away, so the next round starts clean |
 
 ## The lobby and the queue
 
@@ -97,7 +98,7 @@ not Config — that is where you add a new one or change the odds.
 | Dial | Now | What it does |
 |---|---|---|
 | `DASH_SPEED` / `DASH_DURATION` | 85 / 0.18s | Speed × duration ≈ distance, so about 15 studs. A lunge, not a teleport |
-| `FART_JUMP_POWER` | 45 | The second jump's kick. Just under a normal jump (50) so it reads as a boost |
+| `FART_JUMP_POWER` | 68 | The second jump's kick. Now clearly stronger than a normal jump (50), so it reaches places a plain jump cannot |
 | `FART_JUMP_APEX_SPEED` | 15 | You cannot fart jump until rising slower than this. **Leave it alone unless the ability feels broken** — it is what stops the charge being spent for no visible effect |
 | `SNEAKERS_MULTIPLIER` / `SNEAKERS_DURATION` | 2× / 5s | 2 × 16 = 32 studs/s, comfortably clear of the Brain Rot NPC at 18 |
 | `SNEAKERS_USES` | 2 | Sneakers alone overrides `ABILITY_USES`. Short and powerful, so you get fewer of them |
@@ -154,6 +155,8 @@ Add a line whenever a dial moves, so the reasoning is not lost. Newest first.
 
 | Date | Change | Why |
 |---|---|---|
+| 2026-07-29 | `FART_JUMP_POWER` 45 → **68** | At just under a normal jump it was the dullest of the three abilities |
+| 2026-07-29 | `ROUND_OVER_SECONDS` 10 → **6**, and the map stays live through it | 10s felt like standing about, and a frozen map left the winner nothing to do |
 | 2026-07-29 | Sneakers → 2× for 5s, **2 uses** (was 1.5× for 8s, 3 uses) | A burst you spend at the right moment rather than a general speed boost. Needed a per-ability `uses` override, which any ability can now use |
 | 2026-07-29 | `INTERMISSION_SECONDS` 8 → **16** | 8s was not long enough to notice a round forming and reach the queue pad |
 | 2026-07-29 | `ROUND_OVER_SECONDS` 6 → **10** | The gap after a round ended felt rushed |
