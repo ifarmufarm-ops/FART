@@ -47,13 +47,21 @@ Bomb.create()
 -- exactly as it does on success. That is the trap LOBBY_PLAN.md flagged, and
 -- it is fixed here BEFORE the lobby practice range exists to fall into it.
 --
--- Allowed: alive in a round, or in the lobby. Deliberately NOT allowed: a
--- player who has been blown up and is watching the rest of the round.
+-- Allowed: alive in a round, in the lobby, or knocking about in the arena
+-- during free play. Deliberately NOT allowed: a player who has been blown up
+-- and is watching the rest of a live round from the ghost area.
+--
+-- The test has to be "is a round actually BEING PLAYED", not "is this player
+-- attached to a round". During the countdown between rounds the queue counts as
+-- attached to the coming round while nobody is alive in it yet -- so asking the
+-- narrower question silently refused every ability used in free play. The
+-- pickup was spent, the movement still played on the player's own machine, and
+-- the only visible sign was the missing puff of smoke.
 AbilityService.start(function(player: Player): boolean
 	if RoundManager.isAlive(player) then
 		return true
 	end
-	return not RoundManager.isInRound(player)
+	return not (RoundManager.getPhase() == "Playing" and RoundManager.isInRound(player))
 end)
 
 -- Who is in the round: everybody who has stepped on the queue pad. Anyone else

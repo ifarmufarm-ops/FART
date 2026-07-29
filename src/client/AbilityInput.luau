@@ -99,10 +99,33 @@ local function doDash()
 			task.wait()
 		end
 
+		-- WAIT UNTIL THEY ARE BACK ON THE FLOOR.
+		--
+		-- The glide below is a LANDING effect. Applying it the instant the burst
+		-- ended meant that dashing off a ledge spent the whole slide in mid-air,
+		-- where it does nothing you can feel, and there was no slide left by the
+		-- time you touched down. Dashing along flat ground falls straight
+		-- through this loop and glides immediately, which is the common case.
+		local airborneUntil = os.clock() + 3 -- safety net, never wait forever
+		while os.clock() < airborneUntil do
+			local humanoid = getParts()
+			if not humanoid then
+				return
+			end
+			local state = humanoid:GetState()
+			if
+				state ~= Enum.HumanoidStateType.Freefall
+				and state ~= Enum.HumanoidStateType.Jumping
+			then
+				break -- feet on the ground
+			end
+			task.wait()
+		end
+
 		-- THE GLIDE. Without this the controller snaps you back to walking pace
-		-- the instant the burst ends, which feels like hitting a wall and makes
-		-- a second dash start from a standstill. Instead the speed is eased down
-		-- to a walk over a fraction of a second, so you slide to a stop as if
+		-- the moment you land, which feels like hitting a wall and makes a
+		-- second dash start from a standstill. Instead the speed is eased down
+		-- to a walk over a fraction of a second, so you slide on landing as if
 		-- the floor were briefly icy -- and a dash launched during the slide
 		-- carries straight on from the one before.
 		local glideStart = os.clock()

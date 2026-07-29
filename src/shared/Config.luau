@@ -353,6 +353,14 @@ Config.DASH_GLIDE_STRENGTH = 0.55
 -- the length of the dash only. At 220 a 0.18s dash lays down about 40 puffs.
 Config.DASH_SMOKE_RATE = 220
 
+-- The trail keeps pouring until you land, then for this much longer. Stopping
+-- it at the end of the burst left the streak hanging in mid-air while you flew
+-- on without it.
+Config.DASH_TRAIL_LINGER = 0.3
+
+-- Safety cap, in case somebody dashes off the map and never lands.
+Config.DASH_TRAIL_MAX = 3
+
 -- FART JUMP: the upward kick of the second jump.
 --
 -- Raised from 45 to 68 and then to 75 after playtesting. It used to sit just

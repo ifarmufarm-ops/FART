@@ -223,12 +223,30 @@ local function dashSmoke(root: BasePart)
 	smoke.Rate = Config.DASH_SMOKE_RATE
 	smoke.Parent = attachment
 
-	-- Pour only while the dash is actually happening, then let the streak fade
-	-- on its own instead of cutting it off abruptly.
-	task.delay(Config.DASH_DURATION, function()
+	-- Keep pouring for the whole journey, not just the burst: through the dash
+	-- itself, through any airtime if it took you off a ledge, and for a moment
+	-- after you touch down. Cutting it at the burst left the trail ending in
+	-- mid-air while the player carried on without it.
+	local humanoid = root.Parent and root.Parent:FindFirstChildOfClass("Humanoid")
+	task.spawn(function()
+		task.wait(Config.DASH_DURATION)
+
+		local stopBy = os.clock() + Config.DASH_TRAIL_MAX
+		while humanoid and humanoid.Parent and os.clock() < stopBy do
+			local state = humanoid:GetState()
+			if
+				state ~= Enum.HumanoidStateType.Freefall
+				and state ~= Enum.HumanoidStateType.Jumping
+			then
+				break -- landed
+			end
+			task.wait(0.05)
+		end
+
+		task.wait(Config.DASH_TRAIL_LINGER)
 		smoke.Rate = 0
 	end)
-	Debris:AddItem(attachment, Config.DASH_DURATION + 2.5)
+	Debris:AddItem(attachment, Config.DASH_TRAIL_MAX + Config.DASH_TRAIL_LINGER + 2.5)
 end
 
 --[[

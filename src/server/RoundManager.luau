@@ -339,18 +339,28 @@ function RoundManager.isInRound(player: Player): boolean
 end
 
 function RoundManager.requestLeave(player: Player): boolean
-	if not isRoundMember(player) then
-		return false -- not in this round at all, so nothing to leave
-	end
-	for _, living in alive do
-		if living == player then
-			return false -- still playing: this is not an escape hatch
+	-- The ONLY refusal: you are alive in a round that is actually being played.
+	-- Letting that through would turn the button into an escape from the bomb.
+	if phase == "Playing" then
+		for _, living in alive do
+			if living == player then
+				return false
+			end
 		end
 	end
 
+	-- Everybody else may go: a ghost watching the finish, somebody knocking
+	-- about in the arena during free play, or a queued player in the lobby who
+	-- has changed their mind before the round starts.
 	for index, member in roundMembers do
 		if member == player then
 			table.remove(roundMembers, index)
+			break
+		end
+	end
+	for index, other in freePlay do
+		if other == player then
+			table.remove(freePlay, index)
 			break
 		end
 	end

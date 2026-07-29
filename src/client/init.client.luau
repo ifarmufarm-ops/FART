@@ -549,7 +549,20 @@ RunService.RenderStepped:Connect(function(deltaTime)
 			break
 		end
 	end
-	leaveButton.Visible = state.phase == "Playing" and not iAmAlive
+
+	if state.phase == "Playing" then
+		-- Mid-round: only offered to somebody who is out of it, watching from
+		-- the ghost area. Offering it to a living player would be an escape
+		-- from the bomb, and the server refuses it anyway.
+		leaveButton.Visible = not iAmAlive
+		leaveButton.Text = "Back to the lobby"
+	else
+		-- Between rounds -- the free-for-all in the arena, or waiting in the
+		-- queue. Anyone who has asked to play can drop out here, and the wording
+		-- says what it actually does: takes you out of the coming round.
+		leaveButton.Visible = state.queued == true
+		leaveButton.Text = "Leave round"
+	end
 
 	if not hasBody then
 		camera.CameraType = Enum.CameraType.Scriptable
