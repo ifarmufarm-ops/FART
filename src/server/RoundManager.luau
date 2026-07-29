@@ -66,6 +66,21 @@ function RoundManager.setParticipantProvider(provider: () -> { Player })
 	getParticipants = provider
 end
 
+--[[
+	How to put somebody back in the lobby when their round is over.
+
+	Wired from init.server.luau so this file never has to know the lobby exists,
+	the same arrangement as the participant provider above. Does nothing until
+	it is set.
+]]
+local returnToLobby: (Player) -> boolean = function()
+	return false
+end
+
+function RoundManager.setReturnToLobby(handler: (Player) -> boolean)
+	returnToLobby = handler
+end
+
 --=============================================================================
 -- SMALL HELPERS
 --=============================================================================
@@ -744,11 +759,13 @@ local function runRound()
 	end
 
 	-- Round over.
+	--
+	-- The pickups, abilities and beacon events are deliberately LEFT RUNNING
+	-- through the celebration below. The winner has the map to themselves for a
+	-- few seconds and should be able to run about grabbing whatever is still
+	-- lying around, rather than standing in a map that froze the instant they
+	-- won. Everything is tidied up shortly before the next round instead.
 	phase = "RoundOver"
-	Pickups.setActive(false)
-	TestRange.setActive(false)
-	AbilityService.clearAll()
-	Modifiers.clearAll()
 	Bomb.detach()
 	holder = nil
 	duration = 0
@@ -763,7 +780,26 @@ local function runRound()
 		announce("No survivors.", COLOR_INFO, Config.ROUND_OVER_SECONDS)
 	end
 
-	task.wait(Config.ROUND_OVER_SECONDS)
+	-- Let them enjoy it, then tidy up just before the next round begins.
+	task.wait(math.max(0, Config.ROUND_OVER_SECONDS - Config.ROUND_CLEANUP_LEAD))
+
+	Pickups.setActive(false)
+	TestRange.setActive(false)
+	AbilityService.clearAll()
+	Modifiers.clearAll()
+
+	-- Everybody who was in this round goes back to the lobby, winner included.
+	-- Without this the winner is left standing in an empty arena until enough
+	-- players queue up for another round -- which, if nobody does, is forever.
+	-- Their body is moved rather than respawned, so winning does not look like
+	-- being killed for it.
+	for _, member in roundMembers do
+		if member.Parent == Players then
+			returnToLobby(member)
+		end
+	end
+
+	task.wait(Config.ROUND_CLEANUP_LEAD)
 
 	-- The round is finished, so nobody is a member of it any more. Clearing
 	-- this hands every HUD back to the neutral lobby state, and stops the next

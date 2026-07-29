@@ -28,7 +28,14 @@ Config.SOLO_TEST_MODE = false
 Config.INTERMISSION_SECONDS = 16
 
 -- How long the winner gets to celebrate before the next intermission begins.
-Config.ROUND_OVER_SECONDS = 10
+-- 10 felt like standing about; 6 is enough to enjoy winning.
+Config.ROUND_OVER_SECONDS = 6
+
+-- The pickups and abilities stay live through that celebration, so the winner
+-- can run around and mess with whatever is left on the floor instead of
+-- watching a frozen map. This is how long BEFORE the celebration ends that
+-- everything is tidied away, so the next round always starts from a clean map.
+Config.ROUND_CLEANUP_LEAD = 0.75
 
 --=============================================================================
 -- THE BOMB TIMER
@@ -301,9 +308,13 @@ Config.DASH_DURATION = 0.18
 -- the length of the dash only. At 220 a 0.18s dash lays down about 40 puffs.
 Config.DASH_SMOKE_RATE = 220
 
--- FART JUMP: the upward kick of the second jump. Slightly under a normal jump
--- so it reads as a "boost" rather than a full second launch.
-Config.FART_JUMP_POWER = 45
+-- FART JUMP: the upward kick of the second jump.
+--
+-- Raised from 45 to 68 after playtesting. It used to sit just under a normal
+-- jump (50) so it read as a small boost, and that made it the dullest of the
+-- three abilities. Now it is clearly stronger than a normal jump, so using it
+-- launches you somewhere a plain jump could not reach.
+Config.FART_JUMP_POWER = 68
 
 -- You cannot fart jump until you are near the top of your first jump or
 -- already falling. This is the difference between the ability working and

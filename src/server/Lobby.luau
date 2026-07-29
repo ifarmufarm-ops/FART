@@ -213,6 +213,36 @@ function Lobby.getModel(): Model?
 	return model
 end
 
+--[[
+	Moves a player's existing body back to the lobby, without respawning them.
+
+	Used when a round finishes: the winner is still standing in the arena and
+	has nothing left to do there, and everybody else has already drifted back.
+	Respawning them instead would take their body away and hand them a new one,
+	which reads as being killed for winning.
+]]
+function Lobby.sendToLobby(player: Player): boolean
+	local character = player.Character
+	if not character or not character.PrimaryPart then
+		return false
+	end
+	local spawns = Lobby.getShuffledSpawns()
+	if #spawns == 0 then
+		return false
+	end
+
+	local ok = pcall(function()
+		character:PivotTo(spawns[1])
+	end)
+	-- Kill any leftover momentum, or somebody who was sprinting when the round
+	-- ended arrives in the lobby still travelling and slides off the pad.
+	if ok and character.PrimaryPart then
+		character.PrimaryPart.AssemblyLinearVelocity = Vector3.zero
+		character.PrimaryPart.AssemblyAngularVelocity = Vector3.zero
+	end
+	return ok
+end
+
 --=============================================================================
 -- KEEPING PEOPLE ON THEIR FEET
 --=============================================================================

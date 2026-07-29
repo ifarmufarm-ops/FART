@@ -57,6 +57,12 @@ end)
 -- Who is in the round: everybody who has stepped on the queue pad. Anyone else
 -- stays in the lobby and is left entirely alone by the round.
 RoundManager.setParticipantProvider(Queue.getQueued)
+
+-- Where players go when their round finishes. Everyone who took part is moved
+-- back here, winner included -- otherwise the winner is left alone in the arena
+-- until enough people queue for another round, which may never happen.
+RoundManager.setReturnToLobby(Lobby.sendToLobby)
+
 Queue.start()
 
 -- Beacon events reach the round and nothing else. Tiny Mode and Reverse
@@ -86,8 +92,17 @@ Modifiers.setParticipantProvider(RoundManager.getRoundMembers)
 -- round to end before they got a body, which is exactly what the button exists
 -- to avoid. RoundManager.isInRound goes false the moment they opt out.
 Lobby.startRespawner(function(player)
-	if RoundManager.getPhase() == "Sandbox" then
+	local phase = RoundManager.getPhase()
+	if phase == "Sandbox" then
 		return true -- Test Mode does its own respawning
+	end
+	-- During the countdown to the next round, everybody gets a body in the
+	-- lobby -- including somebody who was blown up in the round before and is
+	-- still queued. Without this they spend the whole 16 second wait bodyless,
+	-- watching the spectator camera, which is the very thing the lobby exists
+	-- to stop. The round start moves them to the arena a moment later anyway.
+	if phase == "Intermission" then
+		return false
 	end
 	return RoundManager.isInRound(player)
 end)
