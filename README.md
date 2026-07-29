@@ -279,9 +279,14 @@ real second player:
 - The "Back to the lobby" button **appearing at all**. Its visibility runs on
   `RenderStepped`, which fires zero times in a headless Studio session, so
   nobody has ever seen it on screen.
-- Beacon isolation. Ice, Tiny and Reverse Controls are expected to leak into
-  the lobby until stage 1d scopes them, and **Low Gravity certainly will** --
-  `workspace.Gravity` is a single global property. See `LOBBY_PLAN.md`.
+- Beacon isolation. Ice Shoes, Tiny Mode and Reverse Controls are now scoped to
+  the round and should **not** reach a lobby player -- verified server-side,
+  never with two clients. If any of them does leak, that is a real bug worth
+  telling me about.
+  **Low Gravity is the exception and will still leak.** `workspace.Gravity` is
+  one property for the whole place, so it cannot be scoped -- it has to be
+  rebuilt as a per-character force, which is the remaining half of stage 1d.
+  Expect the lobby to go floaty; that one is not a bug yet.
 - The Brain Rot NPC choosing between several possible victims.
 
 **Needs real hardware:**
