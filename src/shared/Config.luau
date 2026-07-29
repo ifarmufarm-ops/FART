@@ -21,11 +21,60 @@ Config.MIN_PLAYERS = 2
 -- SET THIS TO FALSE BEFORE PUBLISHING.
 Config.SOLO_TEST_MODE = false
 
--- Countdown shown between rounds, in seconds.
-Config.INTERMISSION_SECONDS = 8
+-- Countdown before a round starts, in seconds. This is also the WINDOW TO JOIN:
+-- anybody who steps on the queue pad before it runs out is in the round that
+-- follows. Doubled from 8 to 16 after playtesting -- 8 seconds was not enough
+-- time to notice a round was forming and get to the pad.
+Config.INTERMISSION_SECONDS = 16
 
--- How long the winner gets to celebrate before the next intermission.
-Config.ROUND_OVER_SECONDS = 6
+-- How long the winner is on screen before everybody -- winners and losers --
+-- respawns in the arena to muck about until the next round starts.
+Config.ROUND_OVER_SECONDS = 4
+
+-- The pickups and abilities stay live from the moment a round ends right
+-- through the countdown to the next one. That gap is deliberately a free-for-all
+-- in the arena: everybody has a body, nobody has the bomb, and the pickups keep
+-- coming. It is the main way a new player gets familiar with the abilities
+-- without a round riding on it. The next round clears everything and starts
+-- fresh, so nothing carries over.
+
+--=============================================================================
+-- THE GHOST AREA
+--=============================================================================
+-- Where you go when you are blown up, instead of watching from a drifting
+-- camera. A glass-floored platform directly above the arena: you keep a body,
+-- you are see-through, and you can walk about and watch the round finish
+-- underneath you.
+
+Config.GHOST_HEIGHT = 130 -- studs above the arena floor
+Config.GHOST_SIZE = 80 -- width and depth of the glass platform
+Config.GHOST_WALL_HEIGHT = 14 -- glass rail, so nobody wanders off the edge
+Config.GHOST_SPAWN_COUNT = 8
+
+-- How see-through a ghost is. 0 is solid, 1 is invisible. High enough to read
+-- as "not really here", low enough that you can still see each other.
+Config.GHOST_TRANSPARENCY = 0.65
+
+-- THE PUNCHING BAG. A meme-faced thing standing in the middle of the ghost
+-- platform that you hit to pass the time while waiting for the round to end.
+-- It counts every punch it has taken.
+
+Config.CLICKER_CLICK_DISTANCE = 26 -- how close you must be to hit it, in studs
+
+-- How far the thump carries. Deliberately short: it should be audible to the
+-- ghosts standing around it and to nobody in the arena 130 studs below.
+Config.CLICKER_SOUND_RANGE = 55
+
+-- PLACEHOLDER -- swap for a proper thump. Roblox ships no punch noise, so this
+-- is a stand-in purely so the thing is testable today.
+Config.CLICKER_SOUND = "rbxasset://sounds/switch3.wav"
+
+-- How far it rocks back when hit, in degrees, and how long the recoil takes.
+-- The return is deliberately slower than the hit, which is what makes it read
+-- as being knocked back rather than just wobbling.
+Config.CLICKER_RECOIL_ANGLE = 18
+Config.CLICKER_RECOIL_TIME = 0.06
+Config.CLICKER_RECOVER_TIME = 0.22
 
 --=============================================================================
 -- THE BOMB TIMER
@@ -58,6 +107,14 @@ Config.RESET_TIMER_AFTER_EXPLOSION = true
 --=============================================================================
 -- PASSING THE BOMB
 --=============================================================================
+
+-- HOLDING THE BOMB MAKES YOU FASTER. Multiplies your walking speed while you
+-- have it, so a holder can realistically run somebody down instead of trudging
+-- after them at exactly their speed. 1.35 is 21.6 studs/s against a normal 16.
+--
+-- It stacks with Sneakers, so a holder wearing them moves at 16 x 2 x 1.35 =
+-- 43 studs/s -- terrifying, brief, and something you have to have earned.
+Config.BOMB_HOLDER_SPEED = 1.35
 
 -- How close the holder has to get to another player to pass it, in studs.
 -- Two players standing chest-to-chest are about 4 studs apart.
@@ -141,6 +198,53 @@ Config.SPAWN_ROOT_HEIGHT = 3.04
 -- intersecting the pad. They fall this far on spawn, which is imperceptible.
 Config.SPAWN_CLEARANCE = 0.15
 
+--=============================================================================
+-- THE LOBBY
+--=============================================================================
+-- Where players stand when they are not in a round. Same place as the arena,
+-- just a long way away -- no loading screen, no teleport, and you can watch the
+-- arena in the distance if you walk to the edge.
+--
+-- IMPORTANT: the lobby floor deliberately does NOT carry Config.TAG_FLOOR.
+-- That tag is exactly what Ice Shoes looks for, so tagging the lobby would
+-- freeze it every time somebody in the arena grabbed the beacon. If the lobby
+-- ever needs its own floor behaviour, give it its own tag.
+
+-- Far enough from the arena (160 wide, centred on the origin) that nothing
+-- happening in one can reach the other. Explosions launch players at 90
+-- studs/s, so this is many times further than anyone can be thrown.
+Config.LOBBY_CENTER = Vector3.new(0, 2, 600)
+
+Config.LOBBY_SIZE = 110 -- width and depth of the lobby floor, in studs
+Config.LOBBY_WALL_HEIGHT = 22 -- perimeter walls, so nobody wanders into the void
+Config.LOBBY_SPAWN_COUNT = 8 -- pads in the ring players appear on
+
+-- How often the lobby looks for somebody who has lost their body and puts them
+-- back on their feet. The game hands out every body itself (see
+-- Players.CharacterAutoLoads in RoundManager), so without this a player who
+-- pressed Reset in the lobby would never come back.
+Config.LOBBY_RESPAWN_CHECK = 1
+
+-- THE PRACTICE RANGE. A row of abilities along one wall of the lobby that you
+-- can pick up and use as much as you like while you wait. Abilities ONLY --
+-- never beacons, because a beacon changes the map for everybody in the round
+-- and somebody idly messing about in the lobby must not be able to do that.
+Config.PRACTICE_RANGE_SPACING = 12 -- gap between pedestals, in studs
+Config.PRACTICE_RESPAWN_DELAY = 2 -- how quickly one comes back after you take it
+
+-- THE QUEUE PAD. Stepping onto it puts you in the next round; stepping onto it
+-- again takes you back out. You have to step OFF and back ON to toggle, so
+-- standing on it does not flicker you in and out.
+--
+-- Queueing is STICKY: once you are in, you stay in for round after round until
+-- you step on the pad again. Nobody has to re-join between every game.
+Config.QUEUE_PAD_RADIUS = 7 -- how close you must get, in studs
+Config.QUEUE_CHECK_INTERVAL = 0.2 -- how often the pad looks for players
+
+-- Colours for the pad: waiting for you, and you-are-in.
+Config.QUEUE_COLOR_IDLE = Color3.fromRGB(126, 214, 255)
+Config.QUEUE_COLOR_ACTIVE = Color3.fromRGB(120, 255, 150)
+
 -- Height the spectator camera floats at, and how far out it orbits.
 Config.SPECTATOR_HEIGHT = 90
 Config.SPECTATOR_DISTANCE = 130
@@ -203,8 +307,10 @@ Config.TAG_PICKUP_ZONE = "HotPotatoPickupZone"
 --=============================================================================
 -- Glowing objects that appear around the arena. Walk into one to collect it.
 
--- How often a new one appears. Was 8; now 50% more often.
-Config.PICKUP_SPAWN_INTERVAL = 5.3
+-- How often a new one appears. Was 8, then 5.3; now a further third quicker,
+-- because abilities are what give the game its pace and there were not enough
+-- of them going around.
+Config.PICKUP_SPAWN_INTERVAL = 4
 
 -- How many sit on the floor at once. This scales with how many people are
 -- still in the round, because a flat number cannot suit both ends of a 4-to-10
@@ -213,9 +319,13 @@ Config.PICKUP_SPAWN_INTERVAL = 5.3
 -- Effective cap = players x PER_PLAYER, held between MIN and MAX.
 --   4 players  -> 3 on the floor
 --   10 players -> 8 on the floor
-Config.PICKUP_PER_PLAYER = 0.8
-Config.PICKUP_MIN_ACTIVE = 3
-Config.PICKUP_MAX_ACTIVE = 8
+-- All three raised by about a third for the same reason as the interval above:
+-- more abilities in play, at every player count rather than only a full lobby.
+--   4 players  -> 4 on the floor (was 3)
+--   10 players -> 11 on the floor (was 8)
+Config.PICKUP_PER_PLAYER = 1.07
+Config.PICKUP_MIN_ACTIVE = 4
+Config.PICKUP_MAX_ACTIVE = 11
 
 -- How close you must get to collect one, in studs.
 Config.PICKUP_COLLECT_RADIUS = 4
@@ -253,14 +363,39 @@ Config.BASE_JUMP_POWER = 50
 Config.DASH_SPEED = 85
 Config.DASH_DURATION = 0.18
 
+-- THE GLIDE. Without this the dash stops dead: Roblox's character controller
+-- yanks you back to walking pace the instant the burst ends, which feels like
+-- hitting a wall and makes chaining two dashes together impossible.
+--
+-- So the dash hands over to a short slide instead, as though the floor were
+-- briefly icy. You keep moving, you can turn, and a second dash launched during
+-- the slide carries straight on from the first.
+Config.DASH_GLIDE_DURATION = 0.3
+
+-- How fast the slide starts, as a fraction of the dash itself. 1 would carry on
+-- at full dash speed (no slowing at all); 0 would remove the glide entirely.
+Config.DASH_GLIDE_STRENGTH = 0.55
+
 -- Dashing leaves a streak of smoke hanging in the air behind you rather than a
 -- solid ribbon. This is how thickly it pours out -- particles per second, for
 -- the length of the dash only. At 220 a 0.18s dash lays down about 40 puffs.
 Config.DASH_SMOKE_RATE = 220
 
--- FART JUMP: the upward kick of the second jump. Slightly under a normal jump
--- so it reads as a "boost" rather than a full second launch.
-Config.FART_JUMP_POWER = 45
+-- The trail keeps pouring until you land, then for this much longer. Stopping
+-- it at the end of the burst left the streak hanging in mid-air while you flew
+-- on without it.
+Config.DASH_TRAIL_LINGER = 0.3
+
+-- Safety cap, in case somebody dashes off the map and never lands.
+Config.DASH_TRAIL_MAX = 3
+
+-- FART JUMP: the upward kick of the second jump.
+--
+-- Raised from 45 to 68 and then to 75 after playtesting. It used to sit just
+-- under a normal jump (50) so it read as a small boost, and that made it the
+-- dullest of the three abilities. At 75 it is half again as strong as a normal
+-- jump, so using it clearly launches you somewhere you could not otherwise get.
+Config.FART_JUMP_POWER = 75
 
 -- You cannot fart jump until you are near the top of your first jump or
 -- already falling. This is the difference between the ability working and
@@ -278,8 +413,19 @@ Config.FART_JUMP_APEX_SPEED = 15
 Config.FART_PUFF_PARTICLES = 24
 
 -- SNEAKERS: how much faster, and for how long.
-Config.SNEAKERS_MULTIPLIER = 1.5
-Config.SNEAKERS_DURATION = 8
+--
+-- Rebalanced from "1.5x for 8 seconds, three times" to "2x for 5 seconds,
+-- twice": a much bigger burst, but far less of it. It is now an escape you
+-- spend at the right moment rather than a general-purpose speed boost.
+--
+-- 2x is 32 studs/s against the Brain Rot NPC's 18, so it remains a reliable way
+-- to get clear of it -- just for a shorter window.
+Config.SNEAKERS_MULTIPLIER = 2
+Config.SNEAKERS_DURATION = 5
+
+-- How many uses Sneakers gets, overriding the usual ABILITY_USES. See the
+-- `uses` field in Abilities.luau for how per-ability counts work.
+Config.SNEAKERS_USES = 2
 
 -- Minimum gap between ability requests from one player. Stops a modified
 -- client spamming the server with use-attempts.
@@ -321,9 +467,25 @@ Config.ICE_TINT = Color3.fromRGB(150, 212, 255)
 
 -- LOW GRAVITY: Roblox's normal gravity is 196.2. Lower means floatier jumps
 -- and much longer hang time -- and much bigger explosions.
+--
+-- HOW THIS WORKS, because it is not what you would expect: Roblox has ONE
+-- gravity setting for the whole game world. There is no way to make it lower in
+-- the arena than in the lobby. Turning it down would make everybody float,
+-- including people who are not even playing.
+--
+-- So the game no longer touches it. Instead each player in the round gets a
+-- gentle upward push, sized to their own weight, which cancels out part of what
+-- gravity is doing to them. The feeling is the same; it just only happens to
+-- the people it should. Change LOW_GRAVITY_VALUE and the push is recalculated
+-- from it, so this still behaves like a gravity dial.
 Config.LOW_GRAVITY_DURATION = 20
 Config.LOW_GRAVITY_VALUE = 60
 Config.NORMAL_GRAVITY = 196.2
+
+-- How often the upward push is recalculated while Low Gravity is running.
+-- It has to be redone periodically because a player's weight changes -- Tiny
+-- Mode shrinks them -- and because anyone who respawns needs a fresh one.
+Config.LOW_GRAVITY_REFRESH = 0.5
 
 -- TINY MODE: everyone shrinks. 0.6 is 60% of normal height.
 Config.TINY_DURATION = 20

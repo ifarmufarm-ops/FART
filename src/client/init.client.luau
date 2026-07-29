@@ -193,6 +193,44 @@ announceStroke.Color = Color3.fromRGB(0, 0, 0)
 announceStroke.Transparency = 1
 announceStroke.Parent = announceLabel
 
+-- LEAVE SPECTATING (only while you are out of the round)
+--
+-- Being blown up should not trap you watching. This appears once you have no
+-- body left and takes you back to the lobby, where you can wander about, try
+-- the pickups, or just wait for the next round somewhere more interesting than
+-- an orbiting camera. It hides itself the moment you have a body again.
+local leaveButton = Instance.new("TextButton")
+leaveButton.Name = "LeaveSpectate"
+leaveButton.AnchorPoint = Vector2.new(0.5, 1)
+-- Well clear of the bottom edge: consoles crop about 5% of the screen, and the
+-- ability button lives in the bottom-right corner on touch.
+leaveButton.Position = UDim2.new(0.5, 0, 1, -110)
+leaveButton.Size = UDim2.new(0, 260, 0, 52)
+leaveButton.BackgroundColor3 = Color3.fromRGB(38, 42, 52)
+leaveButton.BackgroundTransparency = 0.15
+leaveButton.Font = Enum.Font.GothamBold
+leaveButton.Text = "Back to the lobby"
+leaveButton.TextColor3 = Color3.fromRGB(235, 238, 245)
+leaveButton.TextSize = 20
+leaveButton.AutoButtonColor = true
+leaveButton.Visible = false
+leaveButton.ZIndex = 6
+leaveButton.Parent = gui
+
+Instance.new("UICorner", leaveButton).CornerRadius = UDim.new(0, 10)
+local leaveStroke = Instance.new("UIStroke")
+leaveStroke.Thickness = 2
+leaveStroke.Color = Color3.fromRGB(126, 214, 255)
+leaveStroke.Transparency = 0.3
+leaveStroke.Parent = leaveButton
+
+leaveButton.Activated:Connect(function()
+	-- Hide at once so it cannot be pressed twice while the server catches up.
+	-- If the server refuses, the per-frame check below puts it straight back.
+	leaveButton.Visible = false
+	Remotes.LeaveRound:FireServer()
+end)
+
 --=============================================================================
 -- ABILITY SLOT (bottom centre)
 --=============================================================================
@@ -320,6 +358,15 @@ Remotes.StateChanged.OnClientEvent:Connect(function(payload)
 
 	vignette.Visible = isHolder
 
+	-- The whole round HUD -- countdown, bar, status line, survivor count -- is
+	-- only for people who have asked to play. Somebody wandering round the
+	-- lobby who has not stepped on the pad does not need a timer, and "waiting
+	-- for players" implies the game is waiting on them when it is not.
+	local showRoundHud = state.queued ~= false
+	topPanel.Visible = showRoundHud
+	statusLabel.Visible = showRoundHud
+	aliveLabel.Visible = showRoundHud
+
 	if state.phase == "Playing" then
 		aliveLabel.Text = #state.aliveUserIds .. " left"
 		if isHolder then
@@ -386,7 +433,13 @@ AbilityInput.start(function(definition, usesLeft)
 
 	-- Lit pips are uses you still have; spent ones dim right down rather than
 	-- disappearing, so the total is always readable.
+	--
+	-- Abilities do not all carry the same number of uses -- Sneakers is short
+	-- and powerful and only gets two -- so pips past this ability's maximum are
+	-- hidden entirely. Leaving them showing would read as a use you never had.
+	local maxUses = definition.uses or Config.ABILITY_USES
 	for index, pip in slotPips do
+		pip.Visible = index <= maxUses
 		local available = index <= usesLeft
 		pip.BackgroundColor3 = if available then definition.color else Color3.fromRGB(70, 74, 84)
 		pip.BackgroundTransparency = if available then 0 else 0.45
@@ -481,6 +534,36 @@ RunService.RenderStepped:Connect(function(deltaTime)
 		and character.Parent ~= nil
 		and character:FindFirstChild("HumanoidRootPart") ~= nil
 
+	-- The way out of watching, offered only while there is something to be let
+	-- out of.
+	--
+	-- This cannot key off "have I got a body" any more: a knocked-out player is
+	-- a ghost up on the glass platform and very much has one. What marks them
+	-- out is being sent the round's HUD while not being on its list of the
+	-- living. Anyone in the lobby is sent the neutral state instead, so they
+	-- never match.
+	local iAmAlive = false
+	for _, userId in state.aliveUserIds do
+		if userId == player.UserId then
+			iAmAlive = true
+			break
+		end
+	end
+
+	if state.phase == "Playing" then
+		-- Mid-round: only offered to somebody who is out of it, watching from
+		-- the ghost area. Offering it to a living player would be an escape
+		-- from the bomb, and the server refuses it anyway.
+		leaveButton.Visible = not iAmAlive
+		leaveButton.Text = "Back to lobby"
+	else
+		-- Between rounds -- the free-for-all in the arena, or waiting in the
+		-- queue. Anyone who has asked to play can drop out here, and the wording
+		-- says what it actually does: takes you out of the coming round.
+		leaveButton.Visible = state.queued == true
+		leaveButton.Text = "Back to lobby"
+	end
+
 	if not hasBody then
 		camera.CameraType = Enum.CameraType.Scriptable
 		orbitAngle += deltaTime * Config.SPECTATOR_ORBIT_SPEED
@@ -493,6 +576,17 @@ RunService.RenderStepped:Connect(function(deltaTime)
 			)
 		camera.CFrame = CFrame.lookAt(eye, center)
 	elseif camera.CameraType == Enum.CameraType.Scriptable then
+		-- Handing the camera back. Restoring the TYPE alone is not enough:
+		-- CameraSubject still points at the humanoid of the body you had before
+		-- you were blown up, which no longer exists. Roblox binds the subject
+		-- when a character spawns, and a camera that was Scriptable at that
+		-- moment can be left holding the dead one -- which looks exactly like
+		-- being stuck in spectator view while your new character walks around
+		-- perfectly well underneath it.
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			camera.CameraSubject = humanoid
+		end
 		camera.CameraType = Enum.CameraType.Custom
 	end
 end)

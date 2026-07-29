@@ -44,6 +44,62 @@ local cycleDuration: number = Config.TIMER_START -- shrinks with every pass
 local receivedAt: number = 0 -- when the current holder got the bomb
 local previousHolder: Player? = nil -- who passed it to the current holder
 
+--[[
+	Who is actually playing.
+
+	This used to be "everybody connected to the server", which was right when
+	there was nowhere else to be. Now there is a lobby, so it is "everybody who
+	has asked to play" -- and the queue is what answers that.
+
+	Kept as a provider rather than a require so RoundManager and Queue do not
+	have to know about each other, the same arrangement Pickups and BrainRot
+	already use for the alive list. init.server.luau wires it up.
+
+	The default returns nobody, so a server with no queue wired in sits in
+	Waiting forever rather than dragging the whole lobby into a round.
+]]
+local getParticipants: () -> { Player } = function()
+	return {}
+end
+
+function RoundManager.setParticipantProvider(provider: () -> { Player })
+	getParticipants = provider
+end
+
+--[[
+	How to put somebody back in the lobby when their round is over.
+
+	Wired from init.server.luau so this file never has to know the lobby exists,
+	the same arrangement as the participant provider above. Does nothing until
+	it is set.
+]]
+local returnToLobby: (Player) -> boolean = function()
+	return false
+end
+
+function RoundManager.setReturnToLobby(handler: (Player) -> boolean)
+	returnToLobby = handler
+end
+
+--[[
+	How to send somebody up to the ghost area, and how to bring them back down.
+	Wired from init.server.luau, same as everything else here, so this file does
+	not have to know the ghost area exists.
+]]
+local sendToGhost: (Player) -> boolean = function()
+	return false
+end
+-- Returns whether they WERE a ghost, which is how the round end knows who
+-- needs bringing down and who is already standing in the arena.
+local clearGhost: (Player) -> boolean = function()
+	return false
+end
+
+function RoundManager.setGhostHandlers(send: (Player) -> boolean, clear: (Player) -> boolean)
+	sendToGhost = send
+	clearGhost = clear
+end
+
 --=============================================================================
 -- SMALL HELPERS
 --=============================================================================
@@ -94,12 +150,105 @@ end
 	Who currently holds the bomb. Stage 3's NPC needs this so it can chase
 	everyone EXCEPT them.
 ]]
+--[[
+	What the game is doing right now: Waiting, Intermission, Playing, RoundOver
+	or Sandbox. The lobby needs this to know whether a player without a body is
+	someone to put back on their feet, or someone who is mid-round and should
+	stay watching until it ends.
+]]
+function RoundManager.getPhase(): string
+	return phase
+end
+
 function RoundManager.getHolder(): Player?
 	return holder
 end
 
+--[[
+	Who this round's messages are for.
+
+	NOT the same as `alive`. Somebody who has just been blown up is no longer
+	alive but is still watching the finish, and cutting their HUD off the moment
+	they die would be worse than useless. So this is everybody who STARTED the
+	round, and it stays put until the round ends.
+
+	Everybody else is in the lobby and must not see any of it -- no bomb timer
+	counting down, no "so-and-so has the bomb", no elimination notices. That was
+	right when the whole server was in the round and is wrong now there is
+	somewhere else to be.
+]]
+local roundMembers: { Player } = {}
+
+-- Whether a round is in progress at all, which is NOT the same as "roundMembers
+-- is non-empty". If every member leaves spectating, the list empties while the
+-- round carries on -- and falling back to broadcasting at everyone then would
+-- undo the very thing they asked for.
+local roundActive = false
+
+-- Everybody knocking about in the arena between rounds. Not in a round, but
+-- very much in the arena, and they should be able to use the pickups.
+local freePlay: { Player } = {}
+
+local function isRoundMember(player: Player): boolean
+	for _, member in roundMembers do
+		if member == player then
+			return true
+		end
+	end
+	return false
+end
+
+--[[
+	Sends to the people in this round, and nobody else.
+
+	Outside a round there is nothing round-specific to leak, so it goes to
+	everyone -- that is how the lobby still sees "Waiting for players".
+]]
+local function fireToRound(remote: RemoteEvent, ...)
+	if not roundActive then
+		remote:FireAllClients(...)
+		return
+	end
+	for _, player in roundMembers do
+		if player.Parent == Players then
+			remote:FireClient(player, ...)
+		end
+	end
+end
+
 local function announce(text: string, color: Color3, hold: number?)
-	Remotes.Announce:FireAllClients(text, color, hold or 3)
+	fireToRound(Remotes.Announce, text, color, hold or 3)
+end
+
+--[[
+	The idle state a lobby player sees: no timer, no holder, nobody alive. It
+	has to be sent rather than simply withheld, or their HUD would freeze on
+	whatever it happened to be showing when they left the round.
+]]
+local function idleState()
+	return {
+		phase = "Waiting",
+		holderUserId = nil,
+		deadline = nil,
+		duration = nil,
+		aliveUserIds = {},
+	}
+end
+
+--[[
+	Is this player in the queue? Wired from init.server.luau.
+
+	The round HUD -- the countdown, the bar, "waiting for players" -- is only
+	shown to people who have actually asked to play. Somebody wandering round
+	the lobby who has not stepped on the pad has no use for a countdown, and
+	showing them one implies the game is waiting on them when it is not.
+]]
+local isQueued: (Player) -> boolean = function()
+	return true -- until wired, show the HUD to everyone as before
+end
+
+function RoundManager.setQueueCheck(check: (Player) -> boolean)
+	isQueued = check
 end
 
 local function broadcast()
@@ -107,13 +256,119 @@ local function broadcast()
 	for _, player in alive do
 		table.insert(ids, player.UserId)
 	end
-	Remotes.StateChanged:FireAllClients({
+	local state = {
 		phase = phase,
 		holderUserId = if holder then holder.UserId else nil,
 		deadline = deadline,
 		duration = duration,
 		aliveUserIds = ids,
-	})
+	}
+
+	-- Every payload is per-player now, because "are you in the queue" differs
+	-- for each of them.
+	for _, player in Players:GetPlayers() do
+		local mine = if roundActive and not isRoundMember(player) then idleState() else table.clone(state)
+		mine.queued = isQueued(player)
+		Remotes.StateChanged:FireClient(player, mine)
+	end
+end
+
+--[[
+	"I am out, let me go to the lobby rather than watch the rest of this."
+
+	Only honoured for somebody who is genuinely out of the round -- a living
+	player asking for this would be using it to escape the bomb, so the check is
+	a rule and not a formality. Returns true if they were released.
+
+	This only releases them from the ROUND. Taking them out of the queue as well
+	is done by whoever wired the remote up -- see init.server.luau -- because
+	the queue is not this file's business. Handing them a body is left to the
+	lobby's own respawner, which is already watching for people without one.
+]]
+--[[
+	Is this player part of the round that is running right now?
+
+	True for everybody who started it, including those already eliminated and
+	watching the finish -- and false the moment they ask to leave. The lobby
+	uses this to decide who to put back on their feet, so it has to go false as
+	soon as somebody opts out, not when the round eventually ends.
+]]
+--[[
+	Everybody in the round right now, for anything that must not touch the
+	lobby. A copy, so a caller cannot reach in and change the roster.
+
+	When no round is running this returns EVERYONE, and that is deliberate.
+	Test Mode's sandbox has no queue and no round, but everybody present is
+	playing in it -- returning nobody there would leave the showcase range's
+	beacons affecting no one at all. Outside a round there are no modifiers
+	running to leak anyway, because the round's end clears them.
+]]
+function RoundManager.getRoundMembers(): { Player }
+	if not roundActive then
+		return Players:GetPlayers()
+	end
+	return table.clone(roundMembers)
+end
+
+--[[
+	Everybody currently IN THE ARENA -- which is not the same as everybody in a
+	round, because of the free-for-all between rounds.
+
+	Three cases:
+	  * a round running   -> its members
+	  * between rounds    -> whoever came back down for free play
+	  * Test Mode sandbox -> everyone, since that is what a sandbox is
+
+	This is what the pickups and the beacon events use. Getting it from `alive`
+	instead would mean nobody could pick anything up between rounds, since
+	nobody is alive in a round that has finished -- and getting it from "everyone"
+	would let a beacon in the arena reach somebody standing in the lobby.
+]]
+function RoundManager.getArenaPlayers(): { Player }
+	if phase == "Sandbox" then
+		return Players:GetPlayers()
+	end
+	if roundActive then
+		return table.clone(roundMembers)
+	end
+	return table.clone(freePlay)
+end
+
+function RoundManager.isInRound(player: Player): boolean
+	return roundActive and isRoundMember(player)
+end
+
+function RoundManager.requestLeave(player: Player): boolean
+	-- The ONLY refusal: you are alive in a round that is actually being played.
+	-- Letting that through would turn the button into an escape from the bomb.
+	if phase == "Playing" then
+		for _, living in alive do
+			if living == player then
+				return false
+			end
+		end
+	end
+
+	-- Everybody else may go: a ghost watching the finish, somebody knocking
+	-- about in the arena during free play, or a queued player in the lobby who
+	-- has changed their mind before the round starts.
+	for index, member in roundMembers do
+		if member == player then
+			table.remove(roundMembers, index)
+			break
+		end
+	end
+	for index, other in freePlay do
+		if other == player then
+			table.remove(freePlay, index)
+			break
+		end
+	end
+
+	-- Their HUD returns to the neutral lobby state at once, rather than
+	-- whenever the round happens to end.
+	Remotes.StateChanged:FireClient(player, idleState())
+	return true
 end
 
 local function setCountdown(seconds: number)
@@ -135,6 +390,14 @@ local function giveBombTo(player: Player): boolean
 	if not character or not Bomb.attachTo(character) then
 		return false
 	end
+
+	-- Carrying the bomb makes you faster, so the chase is a real chase rather
+	-- than two players jogging at identical speed. Hand it over BEFORE changing
+	-- who the holder is, so the person losing it drops back to normal.
+	if holder then
+		AbilityService.setBombHolder(holder, false)
+	end
+	AbilityService.setBombHolder(player, true)
 
 	previousHolder = holder
 	holder = player
@@ -231,6 +494,10 @@ local function eliminate(player: Player)
 	local character = player.Character
 	local blastPosition = Bomb.getPosition()
 
+	-- Whatever happens next, they are not carrying it any more, so the speed
+	-- that came with it goes too.
+	AbilityService.setBombHolder(player, false)
+
 	if holder == player then
 		Bomb.detach()
 		holder = nil
@@ -248,11 +515,19 @@ local function eliminate(player: Player)
 		Ragdoll.apply(character)
 		Ragdoll.launch(character)
 
-		-- Let the body fly and settle, then remove it. The client notices the
-		-- character is gone and switches to the spectator camera.
+		-- Let the body fly and settle, then take them up to the ghost area with
+		-- a fresh one. Losing your body entirely and watching a drifting camera
+		-- is a long time to spend doing nothing; up there you can walk about
+		-- and watch the rest of the round through the glass.
 		task.delay(Config.CORPSE_LIFETIME, function()
 			if character and character.Parent then
 				character:Destroy()
+			end
+			-- Only if the round is still going. If it ended while the body was
+			-- in the air, everybody is about to be put back in the arena
+			-- anyway and sending them up first would be a pointless round trip.
+			if phase == "Playing" and player.Parent == Players then
+				sendToGhost(player)
 			end
 		end)
 	end
@@ -359,6 +634,11 @@ local function runIntermission()
 	phase = "Intermission"
 	holder = nil
 	alive = {}
+	-- The countdown belongs to whoever is queued: they are the ones about to be
+	-- pulled in, and it is their window to change their mind. Anybody else in
+	-- the lobby should not see a countdown for a round they are not in.
+	roundMembers = getParticipants()
+	roundActive = true
 	Bomb.detach()
 	setCountdown(Config.INTERMISSION_SECONDS)
 	broadcast()
@@ -367,8 +647,8 @@ local function runIntermission()
 
 	while now() < deadline do
 		task.wait(0.25)
-		if #Players:GetPlayers() < minimumPlayers() then
-			return false -- someone left, fall back to Waiting
+		if #getParticipants() < minimumPlayers() then
+			return false -- someone left or unqueued, fall back to Waiting
 		end
 	end
 	return true
@@ -440,10 +720,18 @@ end
 local function runRound()
 	phase = "Playing"
 
+	-- Only the queue plays. Everyone else stays in the lobby, untouched by the
+	-- bomb, the pickups and the eliminations.
 	alive = {}
-	for _, player in Players:GetPlayers() do
+	for _, player in getParticipants() do
 		table.insert(alive, player)
 	end
+
+	-- Everyone who STARTED gets this round's HUD, and keeps it after they are
+	-- eliminated so they can watch the finish. See roundMembers.
+	roundMembers = table.clone(alive)
+	roundActive = true
+	freePlay = {} -- the free-for-all is over; the round owns the arena again
 
 	spawnEveryone(alive)
 	pruneAlive()
@@ -563,11 +851,13 @@ local function runRound()
 	end
 
 	-- Round over.
+	--
+	-- The pickups, abilities and beacon events are deliberately LEFT RUNNING
+	-- through the celebration below. The winner has the map to themselves for a
+	-- few seconds and should be able to run about grabbing whatever is still
+	-- lying around, rather than standing in a map that froze the instant they
+	-- won. Everything is tidied up shortly before the next round instead.
 	phase = "RoundOver"
-	Pickups.setActive(false)
-	TestRange.setActive(false)
-	AbilityService.clearAll()
-	Modifiers.clearAll()
 	Bomb.detach()
 	holder = nil
 	duration = 0
@@ -582,7 +872,86 @@ local function runRound()
 		announce("No survivors.", COLOR_INFO, Config.ROUND_OVER_SECONDS)
 	end
 
+	-- A few seconds on the winner, then EVERYBODY comes back into the arena --
+	-- winner, losers, ghosts, all of them -- and the map stays live.
+	--
+	-- That gap before the next round is deliberately a free-for-all: bodies but
+	-- no bomb, with pickups still spawning. It is the main chance a new player
+	-- gets to work out what the abilities do without a round riding on it, and
+	-- it is why nobody is sent back to the lobby here. The lobby is for people
+	-- who have chosen to stop playing, not a waiting room between rounds.
 	task.wait(Config.ROUND_OVER_SECONDS)
+
+	local spawns = Arena.getShuffledSpawns()
+	freePlay = {}
+	for index, member in roundMembers do
+		if member.Parent == Players then
+			table.insert(freePlay, member)
+
+			-- Solid again, and no longer treated as dead. Tells us whether they
+			-- were up on the glass or already down here.
+			local wasGhost = clearGhost(member)
+
+			local character = member.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			local onTheirFeet = humanoid ~= nil and humanoid.Health > 0
+
+			if onTheirFeet and not wasGhost then
+				-- THE WINNER. They are already standing in the arena with a
+				-- perfectly good body, so leave them entirely alone -- they
+				-- carry on roaming while everybody else drops back in around
+				-- them. Respawning them here is what briefly flashed them
+				-- through the lobby, because a respawn always lands on the
+				-- lobby's spawn pads before anything can move them.
+				continue
+			end
+
+			local destination = spawns[((index - 1) % math.max(#spawns, 1)) + 1]
+			if wasGhost and onTheirFeet then
+				-- A ghost already has a body; just bring it down. No respawn,
+				-- so no trip through the lobby.
+				if character and destination then
+					pcall(function()
+						character:PivotTo(destination)
+					end)
+					if character.PrimaryPart then
+						character.PrimaryPart.AssemblyLinearVelocity = Vector3.zero
+					end
+				end
+				continue
+			end
+
+			-- No usable body at all, so they need a new one.
+			task.spawn(function()
+				pcall(function()
+					member:LoadCharacter()
+				end)
+				local fresh = member.Character
+				if fresh and destination then
+					pcall(function()
+						fresh:PivotTo(destination)
+					end)
+				end
+				if fresh then
+					Ragdoll.setCollisionGroup(fresh, Ragdoll.LIVE_GROUP)
+				end
+			end)
+		end
+	end
+
+	-- Hand the pickups over to the free-play crowd. Without this they would
+	-- keep asking `alive`, which is empty now the round is over, and nobody
+	-- would be able to pick anything up.
+	Pickups.setActive(true, RoundManager.getArenaPlayers)
+
+	announce("Free play -- next round soon", COLOR_INFO, 3)
+
+	-- The round itself is over even though everyone is still in the arena.
+	-- Clearing this hands every HUD back to the neutral state and stops the
+	-- next round's messages reaching last round's players by accident.
+	roundMembers = {}
+	roundActive = false
+	broadcast()
 end
 
 --=============================================================================
@@ -673,28 +1042,65 @@ function RoundManager.start()
 
 	task.spawn(function()
 		while true do
-			-- Waiting for enough players.
-			phase = "Waiting"
-			holder = nil
-			alive = {}
-			duration = 0
-			deadline = 0
-			Bomb.detach()
-			Pickups.setActive(false)
-			AbilityService.clearAll()
-			broadcast()
+			-- TEST MODE'S SANDBOX comes first and ignores the queue entirely.
+			--
+			-- It has to, and this was missed when rounds began taking their
+			-- players from the queue: the sandbox sat behind the same "enough
+			-- players queued" gate as a real round, so it waited forever for
+			-- somebody to step on a pad that Test Mode does not even ask you to
+			-- use. Test Mode has been quietly doing nothing ever since.
+			if Config.TEST_MODE and Config.TEST_NO_BOMB then
+				local sandboxOk, sandboxErr = pcall(runSandbox) -- never returns while TEST_MODE is on
+				if not sandboxOk then
+					warn("[Hot Potato] Sandbox stopped: " .. tostring(sandboxErr))
+					task.wait(2)
+				end
+				continue
+			end
 
-			while #Players:GetPlayers() < minimumPlayers() do
-				task.wait(1)
+			-- Only tear the arena down if there is genuinely nobody to play with.
+			--
+			-- This block used to run on EVERY pass of the loop, including the one
+			-- straight after a round finished -- which shipped the whole
+			-- free-play crowd back to the lobby and switched the pickups off a
+			-- fraction of a second after the round end had set them up. That is
+			-- why free play had no pickups, and why the winner was briefly seen
+			-- in the lobby before reappearing in the arena.
+			--
+			-- With enough players still queued we now go straight on to the next
+			-- countdown and the arena is simply left running.
+			if #getParticipants() < minimumPlayers() then
+				phase = "Waiting"
+				holder = nil
+				alive = {}
+				roundMembers = {} -- no round, so no round-only audience
+				roundActive = false
+				-- Nobody to play with, so the free-for-all ends too and anybody
+				-- still in the arena goes back to the lobby.
+				for _, player in freePlay do
+					if player.Parent == Players then
+						clearGhost(player)
+						returnToLobby(player)
+					end
+				end
+				freePlay = {}
+				duration = 0
+				deadline = 0
+				Bomb.detach()
+				Pickups.setActive(false)
+				AbilityService.clearAll()
+				broadcast()
+
+				while #getParticipants() < minimumPlayers() do
+					task.wait(1)
+				end
 			end
 
 			-- Wrapped so that an unexpected error in one round cannot kill the
 			-- loop and leave the server permanently stuck with no game running.
 			-- The error still shows up in the output for you to read.
 			local ok, err = pcall(function()
-				if Config.TEST_MODE and Config.TEST_NO_BOMB then
-					runSandbox() -- never returns while TEST_MODE is on
-				elseif runIntermission() then
+				if runIntermission() then
 					runRound()
 				end
 			end)

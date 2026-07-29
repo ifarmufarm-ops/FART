@@ -246,6 +246,13 @@ function Arena.build(): Model
 		) :: SpawnLocation
 		pad.Neutral = true
 		pad.Duration = 0 -- no forcefield bubble on spawn
+		-- Disabled so Roblox never picks one of these to respawn somebody on.
+		-- Players belong in the LOBBY unless a round has explicitly placed them
+		-- here, and Roblox's own spawn logic has no idea a round is running.
+		-- They stay as real SpawnLocations so the arena still stands on its own
+		-- if you strip the game logic out; RoundManager places players by
+		-- PivotTo either way.
+		pad.Enabled = false
 		spawnPoints[i] = CFrame.lookAt(pos, Vector3.new(0, pos.Y, 0))
 	end
 

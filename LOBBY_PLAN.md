@@ -28,11 +28,11 @@ design work in this stage.
 
 | Event | Leaks into the lobby? | Fix |
 |---|---|---|
-| **Ice Shoes** | Only if the lobby floor is tagged | Don't tag it. Trivial |
-| **Tiny Mode** | Yes — iterates every player | Iterate the round's players instead. Trivial |
-| **Reverse Controls** | Yes — `FireAllClients` | Send to round participants only. Trivial |
+| **Ice Shoes** | ~~Only if the lobby floor is tagged~~ **DONE** | Lobby floor is untagged, asserted in testing |
+| **Tiny Mode** | ~~Yes — iterates every player~~ **DONE** | Applies to round members; reverts for everyone, so nobody can be left shrunk |
+| **Reverse Controls** | ~~Yes — `FireAllClients`~~ **DONE** | `ModifierChanged` goes per-player; non-participants get an empty list, which actively clears their client effects |
 | **Brain Rot** | No | Already scoped: lives in the arena, targets `getAlive()` |
-| **Low Gravity** | **Yes, and cannot be scoped as written** | Needs a rewrite — see below |
+| **Low Gravity** | ~~**Yes, and cannot be scoped as written**~~ **DONE** | Rewritten as a per-character upward force. No longer touches `workspace.Gravity` |
 
 ### Correction to my earlier draft
 
@@ -76,6 +76,25 @@ the event HUD until they are returned to the lobby.
 
 ---
 
+## Stage 1 — COMPLETE (2026-07-29)
+
+All of it is built. What actually shipped differs from the plan below in three
+ways worth knowing:
+
+- **There is no "return to the lobby at round end".** Playtesting turned that
+  into the opposite: everybody respawns in the ARENA for a free-for-all between
+  rounds, with the pickups still running, because that gap is the best chance a
+  new player gets to learn the abilities. The lobby is for people who have
+  chosen to stop playing.
+- **The spectator camera is gone**, replaced by a ghost area: a glass platform
+  above the arena where knocked-out players keep a body, turn see-through, and
+  watch the round through the floor. There is a punching bag up there.
+- **The practice range is its own file** rather than a generalised `TestRange`.
+  Making that one support two live instances was more machinery than eighty
+  lines of pedestals justified.
+
+The original plan follows, for the reasoning behind each decision.
+
 ## Stage 1 — the work
 
 Playable outcome: spawn in a lobby, touch a pad to queue, roam freely, get pulled
@@ -98,6 +117,16 @@ and expensive later.
 `RoundManager.runRound()` currently takes every connected player as a
 participant. That becomes **"everyone in the queue"**. Everything else here is
 mechanical; this is the change that matters.
+
+### The eligibility trap — FIXED (2026-07-29)
+
+`init.server.luau` used to wire `AbilityService.start(RoundManager.isAlive)`,
+which would have thrown away every ability used in a lobby practice range —
+pickup spent, nothing happening, HUD identical to success.
+
+Fixed **before** the practice range exists to fall into it. The check now
+allows anyone alive in a round *or* in the lobby, and still refuses a player
+who has been blown up and is watching the rest of the round.
 
 ### The trap that will bite
 

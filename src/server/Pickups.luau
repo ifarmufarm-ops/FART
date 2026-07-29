@@ -138,9 +138,11 @@ function Pickups.buildVisual(definition: Abilities.Definition, position: Vector3
 	light.Parent = part
 
 	-- The icon floats above it so you can tell what it is from across the map.
+	-- Two thirds of its original 70px. Full size dominated the screen with
+	-- several pickups in view; a third turned out to be too small to read.
 	local billboard = Instance.new("BillboardGui")
-	billboard.Size = UDim2.fromOffset(70, 70)
-	billboard.StudsOffset = Vector3.new(0, 2.2, 0)
+	billboard.Size = UDim2.fromOffset(46, 46)
+	billboard.StudsOffset = Vector3.new(0, 2, 0)
 	billboard.AlwaysOnTop = true
 	billboard.Parent = part
 

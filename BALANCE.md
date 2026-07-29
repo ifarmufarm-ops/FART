@@ -42,8 +42,19 @@ The dials that decide how long a round lasts and how it accelerates.
 | `TIMER_MINIMUM_DUEL` | 0.75s | The floor once only two are left. **Must stay below `PASS_COOLDOWN`** or duels can run forever |
 | `RESET_TIMER_AFTER_EXPLOSION` | `true` | `true` = every cycle starts fresh at 15s. `false` = it keeps shrinking all round, so late rounds are brutal |
 | `MIN_PLAYERS` | 2 | How many are needed for a real round |
-| `INTERMISSION_SECONDS` | 8s | Countdown between rounds |
-| `ROUND_OVER_SECONDS` | 6s | How long the winner is shown |
+| `INTERMISSION_SECONDS` | 16s | Countdown before a round starts — and **the window to join**. Anyone who reaches the queue pad before it runs out is in |
+| `ROUND_OVER_SECONDS` | 6s | How long the winner is shown before the next countdown. The map stays live through it, so the winner can run around with whatever is left |
+| `ROUND_CLEANUP_LEAD` | 0.75s | How long before that ends the pickups are tidied away, so the next round starts clean |
+
+## The lobby and the queue
+
+| Dial | Now | What it does |
+|---|---|---|
+| `LOBBY_CENTER` | (0, 2, 600) | How far the lobby sits from the arena. Far enough that nothing in one can reach the other |
+| `LOBBY_SIZE` | 110 studs | How much room there is to roam between rounds |
+| `LOBBY_SPAWN_COUNT` | 8 | Pads in the ring players appear on |
+| `QUEUE_PAD_RADIUS` | 7 studs | How close you must get to the pad to join or leave |
+| `LOBBY_RESPAWN_CHECK` | 1s | How quickly somebody who lost their body gets it back. **Not** cosmetic — the game hands out every body itself, so without this you would stay bodyless |
 
 ## Passing
 
@@ -77,7 +88,7 @@ How much stuff is on the floor.
 | `PICKUP_MIN_ACTIVE` / `PICKUP_MAX_ACTIVE` | 3 / 8 | Held between these two, so 4 players get 3 and 10 players get 8 |
 | `PICKUP_LIFETIME` | 30s | An untouched one disappears after this, so corners do not silt up |
 | `PICKUP_COLLECT_RADIUS` | 4 studs | How close you must get to take one |
-| `ABILITY_USES` | 3 | Uses in a single pickup. You carry one ability at a time; a new one **replaces** it rather than stacking |
+| `ABILITY_USES` | 3 | Uses in a single pickup. You carry one ability at a time; a new one **replaces** it rather than stacking. An individual ability can override this with a `uses` field in `Abilities.luau` — Sneakers does |
 
 Which pickups exist and how often each appears is in `src/shared/Abilities.luau`,
 not Config — that is where you add a new one or change the odds.
@@ -87,9 +98,10 @@ not Config — that is where you add a new one or change the odds.
 | Dial | Now | What it does |
 |---|---|---|
 | `DASH_SPEED` / `DASH_DURATION` | 85 / 0.18s | Speed × duration ≈ distance, so about 15 studs. A lunge, not a teleport |
-| `FART_JUMP_POWER` | 45 | The second jump's kick. Just under a normal jump (50) so it reads as a boost |
+| `FART_JUMP_POWER` | 68 | The second jump's kick. Now clearly stronger than a normal jump (50), so it reaches places a plain jump cannot |
 | `FART_JUMP_APEX_SPEED` | 15 | You cannot fart jump until rising slower than this. **Leave it alone unless the ability feels broken** — it is what stops the charge being spent for no visible effect |
-| `SNEAKERS_MULTIPLIER` / `SNEAKERS_DURATION` | 1.5× / 8s | 1.5 × 16 = 24 studs/s, which outruns the Brain Rot NPC at 18 |
+| `SNEAKERS_MULTIPLIER` / `SNEAKERS_DURATION` | 2× / 5s | 2 × 16 = 32 studs/s, comfortably clear of the Brain Rot NPC at 18 |
+| `SNEAKERS_USES` | 2 | Sneakers alone overrides `ABILITY_USES`. Short and powerful, so you get fewer of them |
 
 ## Beacon events
 
@@ -143,6 +155,11 @@ Add a line whenever a dial moves, so the reasoning is not lost. Newest first.
 
 | Date | Change | Why |
 |---|---|---|
+| 2026-07-29 | `FART_JUMP_POWER` 45 → **68** | At just under a normal jump it was the dullest of the three abilities |
+| 2026-07-29 | `ROUND_OVER_SECONDS` 10 → **6**, and the map stays live through it | 10s felt like standing about, and a frozen map left the winner nothing to do |
+| 2026-07-29 | Sneakers → 2× for 5s, **2 uses** (was 1.5× for 8s, 3 uses) | A burst you spend at the right moment rather than a general speed boost. Needed a per-ability `uses` override, which any ability can now use |
+| 2026-07-29 | `INTERMISSION_SECONDS` 8 → **16** | 8s was not long enough to notice a round forming and reach the queue pad |
+| 2026-07-29 | `ROUND_OVER_SECONDS` 6 → **10** | The gap after a round ended felt rushed |
 | 2026-07-29 | `TIMER_MINIMUM_DUEL` added at 0.75s | Ends a one-on-one by the clock. Verified as logic, **not yet played** |
 | 2026-07-29 | `PASS_BACK_MIN_PLAYERS` added at 3 | The pass-back rule alone would have guaranteed the death of whoever received the bomb in a duel |
 | 2026-07-29 | `BLOCK_INSTANT_PASS_BACK` → `true` | Trade-back stalemate confirmed with two clients: two players really do ping-pong forever |

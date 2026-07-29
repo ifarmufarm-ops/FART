@@ -24,11 +24,15 @@ export type State = {
 	deadline: number?, -- server clock time the timer hits zero
 	duration: number?, -- how long this countdown was to begin with
 	aliveUserIds: { number }, -- everyone still in the round
+	-- Whether the player receiving this is in the queue. The round HUD is
+	-- hidden for anyone who is not, since a countdown means nothing to somebody
+	-- who has not asked to play.
+	queued: boolean?,
 }
 
 local FOLDER_NAME = "Remotes"
 local EVENT_NAMES =
-	{ "StateChanged", "Announce", "AbilityRequest", "AbilityState", "AbilityUsed", "ModifierChanged" }
+	{ "StateChanged", "Announce", "AbilityRequest", "AbilityState", "AbilityUsed", "ModifierChanged", "LeaveRound" }
 
 local function getFolder(): Folder
 	if RunService:IsServer() then
@@ -68,6 +72,14 @@ local Remotes = {
 	-- an instruction -- the server decides whether the player actually has the
 	-- ability, is alive, and is off cooldown. See AbilityService.
 	AbilityRequest = folder:WaitForChild("AbilityRequest") :: RemoteEvent,
+
+	-- CLIENT -> SERVER. Carries nothing.
+	--
+	-- "I have been blown up and I would rather go and wander round the lobby
+	-- than watch the rest of this." Like AbilityRequest it is a REQUEST: the
+	-- server checks that they really are out of the round before honouring it,
+	-- so it can never be used to escape a bomb.
+	LeaveRound = folder:WaitForChild("LeaveRound") :: RemoteEvent,
 
 	-- Server -> one client: (abilityId or nil) -- what is in your slot now.
 	AbilityState = folder:WaitForChild("AbilityState") :: RemoteEvent,
