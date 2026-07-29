@@ -232,6 +232,18 @@ end
 	having to touch the pad again. Handing them a body is left to the lobby's
 	own respawner, which is already watching for people without one.
 ]]
+--[[
+	Is this player part of the round that is running right now?
+
+	True for everybody who started it, including those already eliminated and
+	watching the finish -- and false the moment they ask to leave. The lobby
+	uses this to decide who to put back on their feet, so it has to go false as
+	soon as somebody opts out, not when the round eventually ends.
+]]
+function RoundManager.isInRound(player: Player): boolean
+	return roundActive and isRoundMember(player)
+end
+
 function RoundManager.requestLeave(player: Player): boolean
 	if not isRoundMember(player) then
 		return false -- not in this round at all, so nothing to leave

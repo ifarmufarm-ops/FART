@@ -46,12 +46,16 @@ Queue.start()
 -- the lobby mid-round would take that away from them.
 --
 -- Test Mode's sandbox does its own respawning, so leave it alone entirely.
+-- The test is "are you still part of the round", NOT "are you queued". Queueing
+-- is sticky, so an eliminated player is still queued for the next round -- using
+-- that as the test left anyone who pressed "back to the lobby" waiting for the
+-- round to end before they got a body, which is exactly what the button exists
+-- to avoid. RoundManager.isInRound goes false the moment they opt out.
 Lobby.startRespawner(function(player)
-	local phase = RoundManager.getPhase()
-	if phase == "Sandbox" then
-		return true
+	if RoundManager.getPhase() == "Sandbox" then
+		return true -- Test Mode does its own respawning
 	end
-	return phase == "Playing" and Queue.isQueued(player)
+	return RoundManager.isInRound(player)
 end)
 
 RoundManager.start()
