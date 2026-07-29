@@ -89,9 +89,13 @@ end
 local sendToGhost: (Player) -> boolean = function()
 	return false
 end
-local clearGhost: (Player) -> () = function() end
+-- Returns whether they WERE a ghost, which is how the round end knows who
+-- needs bringing down and who is already standing in the arena.
+local clearGhost: (Player) -> boolean = function()
+	return false
+end
 
-function RoundManager.setGhostHandlers(send: (Player) -> boolean, clear: (Player) -> ())
+function RoundManager.setGhostHandlers(send: (Player) -> boolean, clear: (Player) -> boolean)
 	sendToGhost = send
 	clearGhost = clear
 end
@@ -847,19 +851,53 @@ local function runRound()
 	for index, member in roundMembers do
 		if member.Parent == Players then
 			table.insert(freePlay, member)
-			clearGhost(member) -- solid again, and no longer treated as dead
+
+			-- Solid again, and no longer treated as dead. Tells us whether they
+			-- were up on the glass or already down here.
+			local wasGhost = clearGhost(member)
+
+			local character = member.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			local onTheirFeet = humanoid ~= nil and humanoid.Health > 0
+
+			if onTheirFeet and not wasGhost then
+				-- THE WINNER. They are already standing in the arena with a
+				-- perfectly good body, so leave them entirely alone -- they
+				-- carry on roaming while everybody else drops back in around
+				-- them. Respawning them here is what briefly flashed them
+				-- through the lobby, because a respawn always lands on the
+				-- lobby's spawn pads before anything can move them.
+				continue
+			end
+
+			local destination = spawns[((index - 1) % math.max(#spawns, 1)) + 1]
+			if wasGhost and onTheirFeet then
+				-- A ghost already has a body; just bring it down. No respawn,
+				-- so no trip through the lobby.
+				if character and destination then
+					pcall(function()
+						character:PivotTo(destination)
+					end)
+					if character.PrimaryPart then
+						character.PrimaryPart.AssemblyLinearVelocity = Vector3.zero
+					end
+				end
+				continue
+			end
+
+			-- No usable body at all, so they need a new one.
 			task.spawn(function()
 				pcall(function()
 					member:LoadCharacter()
 				end)
-				local character = member.Character
-				if character and #spawns > 0 then
+				local fresh = member.Character
+				if fresh and destination then
 					pcall(function()
-						character:PivotTo(spawns[((index - 1) % #spawns) + 1])
+						fresh:PivotTo(destination)
 					end)
 				end
-				if character then
-					Ragdoll.setCollisionGroup(character, Ragdoll.LIVE_GROUP)
+				if fresh then
+					Ragdoll.setCollisionGroup(fresh, Ragdoll.LIVE_GROUP)
 				end
 			end)
 		end
@@ -968,30 +1006,42 @@ function RoundManager.start()
 
 	task.spawn(function()
 		while true do
-			-- Waiting for enough players.
-			phase = "Waiting"
-			holder = nil
-			alive = {}
-			roundMembers = {} -- no round, so no round-only audience
-			roundActive = false
-			-- Not enough players to carry on, so the free-for-all ends too and
-			-- everybody left in the arena is put back in the lobby.
-			for _, player in freePlay do
-				if player.Parent == Players then
-					clearGhost(player)
-					returnToLobby(player)
+			-- Only tear the arena down if there is genuinely nobody to play with.
+			--
+			-- This block used to run on EVERY pass of the loop, including the one
+			-- straight after a round finished -- which shipped the whole
+			-- free-play crowd back to the lobby and switched the pickups off a
+			-- fraction of a second after the round end had set them up. That is
+			-- why free play had no pickups, and why the winner was briefly seen
+			-- in the lobby before reappearing in the arena.
+			--
+			-- With enough players still queued we now go straight on to the next
+			-- countdown and the arena is simply left running.
+			if #getParticipants() < minimumPlayers() then
+				phase = "Waiting"
+				holder = nil
+				alive = {}
+				roundMembers = {} -- no round, so no round-only audience
+				roundActive = false
+				-- Nobody to play with, so the free-for-all ends too and anybody
+				-- still in the arena goes back to the lobby.
+				for _, player in freePlay do
+					if player.Parent == Players then
+						clearGhost(player)
+						returnToLobby(player)
+					end
 				end
-			end
-			freePlay = {}
-			duration = 0
-			deadline = 0
-			Bomb.detach()
-			Pickups.setActive(false)
-			AbilityService.clearAll()
-			broadcast()
+				freePlay = {}
+				duration = 0
+				deadline = 0
+				Bomb.detach()
+				Pickups.setActive(false)
+				AbilityService.clearAll()
+				broadcast()
 
-			while #getParticipants() < minimumPlayers() do
-				task.wait(1)
+				while #getParticipants() < minimumPlayers() do
+					task.wait(1)
+				end
 			end
 
 			-- Wrapped so that an unexpected error in one round cannot kill the

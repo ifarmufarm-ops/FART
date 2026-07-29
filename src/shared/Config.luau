@@ -271,8 +271,10 @@ Config.TAG_PICKUP_ZONE = "HotPotatoPickupZone"
 --=============================================================================
 -- Glowing objects that appear around the arena. Walk into one to collect it.
 
--- How often a new one appears. Was 8; now 50% more often.
-Config.PICKUP_SPAWN_INTERVAL = 5.3
+-- How often a new one appears. Was 8, then 5.3; now a further third quicker,
+-- because abilities are what give the game its pace and there were not enough
+-- of them going around.
+Config.PICKUP_SPAWN_INTERVAL = 4
 
 -- How many sit on the floor at once. This scales with how many people are
 -- still in the round, because a flat number cannot suit both ends of a 4-to-10
@@ -281,9 +283,13 @@ Config.PICKUP_SPAWN_INTERVAL = 5.3
 -- Effective cap = players x PER_PLAYER, held between MIN and MAX.
 --   4 players  -> 3 on the floor
 --   10 players -> 8 on the floor
-Config.PICKUP_PER_PLAYER = 0.8
-Config.PICKUP_MIN_ACTIVE = 3
-Config.PICKUP_MAX_ACTIVE = 8
+-- All three raised by about a third for the same reason as the interval above:
+-- more abilities in play, at every player count rather than only a full lobby.
+--   4 players  -> 4 on the floor (was 3)
+--   10 players -> 11 on the floor (was 8)
+Config.PICKUP_PER_PLAYER = 1.07
+Config.PICKUP_MIN_ACTIVE = 4
+Config.PICKUP_MAX_ACTIVE = 11
 
 -- How close you must get to collect one, in studs.
 Config.PICKUP_COLLECT_RADIUS = 4

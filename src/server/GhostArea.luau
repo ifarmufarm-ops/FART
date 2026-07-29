@@ -191,13 +191,18 @@ end
 
 	Called when a round ends and everybody comes back down to the arena, and
 	when a ghost leaves for the lobby.
+
+	Returns whether they actually were one, which tells the caller whether this
+	player needs carrying back down to the arena or is already there.
 ]]
-function GhostArea.restore(player: Player)
+function GhostArea.restore(player: Player): boolean
+	local wasGhost = ghosts[player] == true
 	ghosts[player] = nil
 	local character = player.Character
 	if character then
 		setGhostLook(character, 0)
 	end
+	return wasGhost
 end
 
 --[[
