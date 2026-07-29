@@ -493,6 +493,17 @@ RunService.RenderStepped:Connect(function(deltaTime)
 			)
 		camera.CFrame = CFrame.lookAt(eye, center)
 	elseif camera.CameraType == Enum.CameraType.Scriptable then
+		-- Handing the camera back. Restoring the TYPE alone is not enough:
+		-- CameraSubject still points at the humanoid of the body you had before
+		-- you were blown up, which no longer exists. Roblox binds the subject
+		-- when a character spawns, and a camera that was Scriptable at that
+		-- moment can be left holding the dead one -- which looks exactly like
+		-- being stuck in spectator view while your new character walks around
+		-- perfectly well underneath it.
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			camera.CameraSubject = humanoid
+		end
 		camera.CameraType = Enum.CameraType.Custom
 	end
 end)

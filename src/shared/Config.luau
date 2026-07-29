@@ -162,6 +162,12 @@ Config.LOBBY_SIZE = 110 -- width and depth of the lobby floor, in studs
 Config.LOBBY_WALL_HEIGHT = 22 -- perimeter walls, so nobody wanders into the void
 Config.LOBBY_SPAWN_COUNT = 8 -- pads in the ring players appear on
 
+-- How often the lobby looks for somebody who has lost their body and puts them
+-- back on their feet. The game hands out every body itself (see
+-- Players.CharacterAutoLoads in RoundManager), so without this a player who
+-- pressed Reset in the lobby would never come back.
+Config.LOBBY_RESPAWN_CHECK = 1
+
 -- THE QUEUE PAD. Stepping onto it puts you in the next round; stepping onto it
 -- again takes you back out. You have to step OFF and back ON to toggle, so
 -- standing on it does not flicker you in and out.

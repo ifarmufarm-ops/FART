@@ -116,6 +116,16 @@ end
 	Who currently holds the bomb. Stage 3's NPC needs this so it can chase
 	everyone EXCEPT them.
 ]]
+--[[
+	What the game is doing right now: Waiting, Intermission, Playing, RoundOver
+	or Sandbox. The lobby needs this to know whether a player without a body is
+	someone to put back on their feet, or someone who is mid-round and should
+	stay watching until it ends.
+]]
+function RoundManager.getPhase(): string
+	return phase
+end
+
 function RoundManager.getHolder(): Player?
 	return holder
 end

@@ -40,6 +40,20 @@ AbilityService.start(RoundManager.isAlive)
 RoundManager.setParticipantProvider(Queue.getQueued)
 Queue.start()
 
+-- Anybody in the lobby who loses their body gets it straight back. The one
+-- exception is a player who is part of a round that is actually running: they
+-- have been eliminated and are watching the finish, and pulling them back to
+-- the lobby mid-round would take that away from them.
+--
+-- Test Mode's sandbox does its own respawning, so leave it alone entirely.
+Lobby.startRespawner(function(player)
+	local phase = RoundManager.getPhase()
+	if phase == "Sandbox" then
+		return true
+	end
+	return phase == "Playing" and Queue.isQueued(player)
+end)
+
 RoundManager.start()
 
 print("[Hot Potato] Server ready.")

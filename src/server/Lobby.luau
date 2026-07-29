@@ -17,10 +17,13 @@
 	every time somebody in the arena grabbed the beacon. See LOBBY_PLAN.md.
 ]]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local Lobby = {}
+
+local respawnerRunning = false
 
 local CENTER = Config.LOBBY_CENTER
 local HALF = Config.LOBBY_SIZE / 2
@@ -235,6 +238,64 @@ function Lobby.sendToLobby(player: Player): boolean
 		character.PrimaryPart.AssemblyAngularVelocity = Vector3.zero
 	end
 	return ok
+end
+
+--=============================================================================
+-- KEEPING PEOPLE ON THEIR FEET
+--=============================================================================
+--[[
+	Gives a body back to anybody in the lobby who has lost one.
+
+	This exists because RoundManager sets Players.CharacterAutoLoads = false --
+	the game hands out every single body itself, so that an eliminated player
+	does not pop straight back into the middle of a live round.
+
+	That was safe while every connected player was a participant, because the
+	round's own spawnEveryone covered everyone. The moment rounds began taking
+	only the queue, everybody else was left with nothing to respawn them: one
+	press of Roblox's Reset button, one fall, and they were bodyless forever,
+	staring at the spectator camera with no way out. That is a real bug this
+	stage introduced, and this is the fix.
+
+	`shouldWait(player)` returns true for somebody who is deliberately without a
+	body right now -- eliminated, mid-round, watching the end of the game -- and
+	who must be left alone rather than yanked back to the lobby.
+]]
+function Lobby.startRespawner(shouldWait: (Player) -> boolean)
+	if respawnerRunning then
+		return
+	end
+	respawnerRunning = true
+
+	local function needsBody(player: Player): boolean
+		local character = player.Character
+		if not character or not character.Parent then
+			return true
+		end
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		-- A corpse counts as no body. Without this, dying in the lobby leaves
+		-- you lying on the floor permanently.
+		return humanoid == nil or humanoid.Health <= 0
+	end
+
+	task.spawn(function()
+		while true do
+			task.wait(Config.LOBBY_RESPAWN_CHECK)
+			for _, player in Players:GetPlayers() do
+				if player.Parent ~= Players then
+					continue
+				end
+				if not needsBody(player) or shouldWait(player) then
+					continue
+				end
+				-- Only the lobby's SpawnLocations are enabled, so this always
+				-- puts them in the lobby and never into a running round.
+				pcall(function()
+					player:LoadCharacter()
+				end)
+			end
+		end
+	end)
 end
 
 --=============================================================================
