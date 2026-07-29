@@ -21,11 +21,14 @@ Config.MIN_PLAYERS = 2
 -- SET THIS TO FALSE BEFORE PUBLISHING.
 Config.SOLO_TEST_MODE = false
 
--- Countdown shown between rounds, in seconds.
-Config.INTERMISSION_SECONDS = 8
+-- Countdown before a round starts, in seconds. This is also the WINDOW TO JOIN:
+-- anybody who steps on the queue pad before it runs out is in the round that
+-- follows. Doubled from 8 to 16 after playtesting -- 8 seconds was not enough
+-- time to notice a round was forming and get to the pad.
+Config.INTERMISSION_SECONDS = 16
 
--- How long the winner gets to celebrate before the next intermission.
-Config.ROUND_OVER_SECONDS = 6
+-- How long the winner gets to celebrate before the next intermission begins.
+Config.ROUND_OVER_SECONDS = 10
 
 --=============================================================================
 -- THE BOMB TIMER
@@ -318,8 +321,19 @@ Config.FART_JUMP_APEX_SPEED = 15
 Config.FART_PUFF_PARTICLES = 24
 
 -- SNEAKERS: how much faster, and for how long.
-Config.SNEAKERS_MULTIPLIER = 1.5
-Config.SNEAKERS_DURATION = 8
+--
+-- Rebalanced from "1.5x for 8 seconds, three times" to "2x for 5 seconds,
+-- twice": a much bigger burst, but far less of it. It is now an escape you
+-- spend at the right moment rather than a general-purpose speed boost.
+--
+-- 2x is 32 studs/s against the Brain Rot NPC's 18, so it remains a reliable way
+-- to get clear of it -- just for a shorter window.
+Config.SNEAKERS_MULTIPLIER = 2
+Config.SNEAKERS_DURATION = 5
+
+-- How many uses Sneakers gets, overriding the usual ABILITY_USES. See the
+-- `uses` field in Abilities.luau for how per-ability counts work.
+Config.SNEAKERS_USES = 2
 
 -- Minimum gap between ability requests from one player. Stops a modified
 -- client spamming the server with use-attempts.

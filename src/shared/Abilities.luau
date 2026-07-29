@@ -14,6 +14,10 @@
 		"Key"      -- press the ability key (Shift on desktop)
 		"AirJump"  -- happens by itself when you jump again in mid-air
 		"Instant"  -- beacons: goes off the moment you touch it, nothing carried
+
+	`uses` is optional. Leave it out and the ability gets Config.ABILITY_USES
+	like everything else; set it to give one ability a different number, which
+	is how a short powerful ability is balanced against a mild repeatable one.
 ]]
 
 export type Kind = "Ability" | "Beacon"
@@ -28,7 +32,10 @@ export type Definition = {
 	color: Color3,
 	icon: string,
 	weight: number,
+	uses: number?, -- optional override for Config.ABILITY_USES
 }
+
+local Config = require(script.Parent.Config)
 
 local Abilities = {}
 
@@ -59,12 +66,15 @@ Abilities.list = {
 	{
 		id = "Sneakers",
 		name = "Sneakers",
-		blurb = "Run 1.5x faster for a bit",
+		blurb = "Run twice as fast, briefly",
 		kind = "Ability" :: Kind,
 		activation = "Key" :: Activation,
 		color = Color3.fromRGB(140, 255, 170),
 		icon = "👟",
 		weight = 30,
+		-- Short and powerful rather than mild and repeatable, so it gets fewer
+		-- uses than the other two. See Config.SNEAKERS_USES.
+		uses = Config.SNEAKERS_USES,
 	},
 
 	--- BEACONS: go off on touch and change the map for EVERYONE -------------

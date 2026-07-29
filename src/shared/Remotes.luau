@@ -28,7 +28,7 @@ export type State = {
 
 local FOLDER_NAME = "Remotes"
 local EVENT_NAMES =
-	{ "StateChanged", "Announce", "AbilityRequest", "AbilityState", "AbilityUsed", "ModifierChanged" }
+	{ "StateChanged", "Announce", "AbilityRequest", "AbilityState", "AbilityUsed", "ModifierChanged", "LeaveRound" }
 
 local function getFolder(): Folder
 	if RunService:IsServer() then
@@ -68,6 +68,14 @@ local Remotes = {
 	-- an instruction -- the server decides whether the player actually has the
 	-- ability, is alive, and is off cooldown. See AbilityService.
 	AbilityRequest = folder:WaitForChild("AbilityRequest") :: RemoteEvent,
+
+	-- CLIENT -> SERVER. Carries nothing.
+	--
+	-- "I have been blown up and I would rather go and wander round the lobby
+	-- than watch the rest of this." Like AbilityRequest it is a REQUEST: the
+	-- server checks that they really are out of the round before honouring it,
+	-- so it can never be used to escape a bomb.
+	LeaveRound = folder:WaitForChild("LeaveRound") :: RemoteEvent,
 
 	-- Server -> one client: (abilityId or nil) -- what is in your slot now.
 	AbilityState = folder:WaitForChild("AbilityState") :: RemoteEvent,

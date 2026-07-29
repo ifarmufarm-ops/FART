@@ -130,8 +130,71 @@ function RoundManager.getHolder(): Player?
 	return holder
 end
 
+--[[
+	Who this round's messages are for.
+
+	NOT the same as `alive`. Somebody who has just been blown up is no longer
+	alive but is still watching the finish, and cutting their HUD off the moment
+	they die would be worse than useless. So this is everybody who STARTED the
+	round, and it stays put until the round ends.
+
+	Everybody else is in the lobby and must not see any of it -- no bomb timer
+	counting down, no "so-and-so has the bomb", no elimination notices. That was
+	right when the whole server was in the round and is wrong now there is
+	somewhere else to be.
+]]
+local roundMembers: { Player } = {}
+
+-- Whether a round is in progress at all, which is NOT the same as "roundMembers
+-- is non-empty". If every member leaves spectating, the list empties while the
+-- round carries on -- and falling back to broadcasting at everyone then would
+-- undo the very thing they asked for.
+local roundActive = false
+
+local function isRoundMember(player: Player): boolean
+	for _, member in roundMembers do
+		if member == player then
+			return true
+		end
+	end
+	return false
+end
+
+--[[
+	Sends to the people in this round, and nobody else.
+
+	Outside a round there is nothing round-specific to leak, so it goes to
+	everyone -- that is how the lobby still sees "Waiting for players".
+]]
+local function fireToRound(remote: RemoteEvent, ...)
+	if not roundActive then
+		remote:FireAllClients(...)
+		return
+	end
+	for _, player in roundMembers do
+		if player.Parent == Players then
+			remote:FireClient(player, ...)
+		end
+	end
+end
+
 local function announce(text: string, color: Color3, hold: number?)
-	Remotes.Announce:FireAllClients(text, color, hold or 3)
+	fireToRound(Remotes.Announce, text, color, hold or 3)
+end
+
+--[[
+	The idle state a lobby player sees: no timer, no holder, nobody alive. It
+	has to be sent rather than simply withheld, or their HUD would freeze on
+	whatever it happened to be showing when they left the round.
+]]
+local function idleState()
+	return {
+		phase = "Waiting",
+		holderUserId = nil,
+		deadline = nil,
+		duration = nil,
+		aliveUserIds = {},
+	}
 end
 
 local function broadcast()
@@ -139,13 +202,57 @@ local function broadcast()
 	for _, player in alive do
 		table.insert(ids, player.UserId)
 	end
-	Remotes.StateChanged:FireAllClients({
+	local state = {
 		phase = phase,
 		holderUserId = if holder then holder.UserId else nil,
 		deadline = deadline,
 		duration = duration,
 		aliveUserIds = ids,
-	})
+	}
+
+	if not roundActive then
+		Remotes.StateChanged:FireAllClients(state)
+		return
+	end
+
+	local idle = idleState()
+	for _, player in Players:GetPlayers() do
+		Remotes.StateChanged:FireClient(player, if isRoundMember(player) then state else idle)
+	end
+end
+
+--[[
+	"I am out, let me go to the lobby rather than watch the rest of this."
+
+	Only honoured for somebody who is genuinely out of the round -- a living
+	player asking for this would be using it to escape the bomb, so the check is
+	a rule and not a formality. Returns true if they were released.
+
+	They stay in the queue, so they are back in for the next round without
+	having to touch the pad again. Handing them a body is left to the lobby's
+	own respawner, which is already watching for people without one.
+]]
+function RoundManager.requestLeave(player: Player): boolean
+	if not isRoundMember(player) then
+		return false -- not in this round at all, so nothing to leave
+	end
+	for _, living in alive do
+		if living == player then
+			return false -- still playing: this is not an escape hatch
+		end
+	end
+
+	for index, member in roundMembers do
+		if member == player then
+			table.remove(roundMembers, index)
+			break
+		end
+	end
+
+	-- Their HUD returns to the neutral lobby state at once, rather than
+	-- whenever the round happens to end.
+	Remotes.StateChanged:FireClient(player, idleState())
+	return true
 end
 
 local function setCountdown(seconds: number)
@@ -391,6 +498,11 @@ local function runIntermission()
 	phase = "Intermission"
 	holder = nil
 	alive = {}
+	-- The countdown belongs to whoever is queued: they are the ones about to be
+	-- pulled in, and it is their window to change their mind. Anybody else in
+	-- the lobby should not see a countdown for a round they are not in.
+	roundMembers = getParticipants()
+	roundActive = true
 	Bomb.detach()
 	setCountdown(Config.INTERMISSION_SECONDS)
 	broadcast()
@@ -478,6 +590,11 @@ local function runRound()
 	for _, player in getParticipants() do
 		table.insert(alive, player)
 	end
+
+	-- Everyone who STARTED gets this round's HUD, and keeps it after they are
+	-- eliminated so they can watch the finish. See roundMembers.
+	roundMembers = table.clone(alive)
+	roundActive = true
 
 	spawnEveryone(alive)
 	pruneAlive()
@@ -617,6 +734,13 @@ local function runRound()
 	end
 
 	task.wait(Config.ROUND_OVER_SECONDS)
+
+	-- The round is finished, so nobody is a member of it any more. Clearing
+	-- this hands every HUD back to the neutral lobby state, and stops the next
+	-- round's messages going to last round's players by accident.
+	roundMembers = {}
+	roundActive = false
+	broadcast()
 end
 
 --=============================================================================
@@ -695,6 +819,12 @@ function RoundManager.start()
 		end
 	end)
 
+	-- "Let me out of spectating." Validated in requestLeave -- a player who is
+	-- still alive is refused, so this can never be used to dodge the bomb.
+	Remotes.LeaveRound.OnServerEvent:Connect(function(player)
+		RoundManager.requestLeave(player)
+	end)
+
 	-- A slow repeat of the current state. Cheap insurance: if a client's HUD
 	-- script starts a moment after we sent an update, it catches up within two
 	-- seconds instead of sitting blank until the next phase change.
@@ -711,6 +841,8 @@ function RoundManager.start()
 			phase = "Waiting"
 			holder = nil
 			alive = {}
+			roundMembers = {} -- no round, so no round-only audience
+			roundActive = false
 			duration = 0
 			deadline = 0
 			Bomb.detach()

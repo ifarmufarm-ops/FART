@@ -193,6 +193,44 @@ announceStroke.Color = Color3.fromRGB(0, 0, 0)
 announceStroke.Transparency = 1
 announceStroke.Parent = announceLabel
 
+-- LEAVE SPECTATING (only while you are out of the round)
+--
+-- Being blown up should not trap you watching. This appears once you have no
+-- body left and takes you back to the lobby, where you can wander about, try
+-- the pickups, or just wait for the next round somewhere more interesting than
+-- an orbiting camera. It hides itself the moment you have a body again.
+local leaveButton = Instance.new("TextButton")
+leaveButton.Name = "LeaveSpectate"
+leaveButton.AnchorPoint = Vector2.new(0.5, 1)
+-- Well clear of the bottom edge: consoles crop about 5% of the screen, and the
+-- ability button lives in the bottom-right corner on touch.
+leaveButton.Position = UDim2.new(0.5, 0, 1, -110)
+leaveButton.Size = UDim2.new(0, 260, 0, 52)
+leaveButton.BackgroundColor3 = Color3.fromRGB(38, 42, 52)
+leaveButton.BackgroundTransparency = 0.15
+leaveButton.Font = Enum.Font.GothamBold
+leaveButton.Text = "Back to the lobby"
+leaveButton.TextColor3 = Color3.fromRGB(235, 238, 245)
+leaveButton.TextSize = 20
+leaveButton.AutoButtonColor = true
+leaveButton.Visible = false
+leaveButton.ZIndex = 6
+leaveButton.Parent = gui
+
+Instance.new("UICorner", leaveButton).CornerRadius = UDim.new(0, 10)
+local leaveStroke = Instance.new("UIStroke")
+leaveStroke.Thickness = 2
+leaveStroke.Color = Color3.fromRGB(126, 214, 255)
+leaveStroke.Transparency = 0.3
+leaveStroke.Parent = leaveButton
+
+leaveButton.Activated:Connect(function()
+	-- Hide at once so it cannot be pressed twice while the server catches up.
+	-- If the server refuses, the per-frame check below puts it straight back.
+	leaveButton.Visible = false
+	Remotes.LeaveRound:FireServer()
+end)
+
 --=============================================================================
 -- ABILITY SLOT (bottom centre)
 --=============================================================================
@@ -386,7 +424,13 @@ AbilityInput.start(function(definition, usesLeft)
 
 	-- Lit pips are uses you still have; spent ones dim right down rather than
 	-- disappearing, so the total is always readable.
+	--
+	-- Abilities do not all carry the same number of uses -- Sneakers is short
+	-- and powerful and only gets two -- so pips past this ability's maximum are
+	-- hidden entirely. Leaving them showing would read as a use you never had.
+	local maxUses = definition.uses or Config.ABILITY_USES
 	for index, pip in slotPips do
+		pip.Visible = index <= maxUses
 		local available = index <= usesLeft
 		pip.BackgroundColor3 = if available then definition.color else Color3.fromRGB(70, 74, 84)
 		pip.BackgroundTransparency = if available then 0 else 0.45
@@ -480,6 +524,11 @@ RunService.RenderStepped:Connect(function(deltaTime)
 	local hasBody = character ~= nil
 		and character.Parent ~= nil
 		and character:FindFirstChild("HumanoidRootPart") ~= nil
+
+	-- The way out of spectating, offered only while there is something to be let
+	-- out of: no body, and a round actually running. In the lobby between
+	-- rounds you already have a body, so it stays hidden.
+	leaveButton.Visible = not hasBody and (state.phase == "Playing" or state.phase == "RoundOver")
 
 	if not hasBody then
 		camera.CameraType = Enum.CameraType.Scriptable

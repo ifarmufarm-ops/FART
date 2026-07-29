@@ -56,7 +56,12 @@ end
 	a second Dash while still holding one gives you three uses, not six.
 ]]
 function AbilityService.grant(player: Player, abilityId: string)
-	slots[player] = { id = abilityId, uses = Config.ABILITY_USES }
+	-- Most abilities get the standard number of uses; one that is deliberately
+	-- short and powerful can ask for fewer. See the `uses` field in
+	-- Abilities.luau, and Config.SNEAKERS_USES for the case that motivated it.
+	local definition = Abilities.get(abilityId)
+	local uses = (definition and definition.uses) or Config.ABILITY_USES
+	slots[player] = { id = abilityId, uses = uses }
 	tellClient(player)
 end
 
