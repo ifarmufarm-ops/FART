@@ -19,7 +19,7 @@ Config.MIN_PLAYERS = 2
 -- bomb, have nobody to pass it to, and explode -- which is exactly what you
 -- want when checking the explosion looks right.
 -- SET THIS TO FALSE BEFORE PUBLISHING.
-Config.SOLO_TEST_MODE = true
+Config.SOLO_TEST_MODE = false
 
 -- Countdown shown between rounds, in seconds.
 Config.INTERMISSION_SECONDS = 8
@@ -34,11 +34,21 @@ Config.ROUND_OVER_SECONDS = 6
 -- time: 15s -> 13s -> 11s -> 9s ... down to the floor below. That guarantees
 -- every cycle ends instead of two fast players trading it forever.
 
--- TESTING VALUE: raised from 15 to 30 to give more room to try things out
--- mid-round. Put this back to 15 before you judge how the game actually feels.
-Config.TIMER_START = 30 -- seconds the first holder of a cycle gets
+Config.TIMER_START = 15 -- seconds the first holder of a cycle gets
 Config.TIMER_DECAY_PER_PASS = 2 -- seconds removed from the timer on each pass
 Config.TIMER_MINIMUM = 5 -- the timer never drops below this
+
+-- THE FINAL DUEL. When only two players are left the timer keeps shrinking past
+-- the floor above, down to this instead. That is what ends a one-on-one.
+--
+-- It has to be SHORTER than PASS_COOLDOWN (1s), because that is the whole
+-- mechanism: eventually the holder's timer is shorter than the time they must
+-- wait before they are allowed to pass at all, so the trade cannot continue and
+-- somebody has to die. The duel speeds up until it breaks.
+--
+-- Raise it towards 1 for a longer, tenser endgame; lower it to end duels
+-- sooner. At or above 1 the duel can run forever again.
+Config.TIMER_MINIMUM_DUEL = 0.75
 
 -- After someone explodes, does the timer go back up to TIMER_START for the
 -- next cycle? True = each cycle starts fresh at 15s. False = it keeps
@@ -61,18 +71,29 @@ Config.PASS_COOLDOWN = 1
 -- more work for the server. 0.05 is 20 checks per second, which feels instant.
 Config.PASS_CHECK_INTERVAL = 0.05
 
--- ANTI-STALEMATE SWITCH. Off by default, because you asked for the plain
--- 1-second cooldown. Leave it off first and see how it plays.
+-- ANTI-STALEMATE SWITCH. Now ON, because the stalemate was CONFIRMED in a
+-- two-client playtest on 2026-07-29 -- two players standing next to each other
+-- really do ping-pong the bomb forever.
 --
--- The problem it solves: two players who just stand next to each other can
--- trade the bomb back and forth every second forever, because each pass resets
--- the timer to TIMER_MINIMUM (5s) which is longer than the 1s cooldown. The
--- round then never ends.
+-- The problem it solves: each pass resets the timer to TIMER_MINIMUM (5s),
+-- which is longer than the 1s PASS_COOLDOWN, so a pair can trade indefinitely
+-- and the round never ends.
 --
--- Turning this on blocks the player who just gave you the bomb from being a
--- valid target until you have passed it to somebody else, which kills the
--- trade. Flip it to true if you see players abusing this in a playtest.
-Config.BLOCK_INSTANT_PASS_BACK = false
+-- With this on, whoever just gave you the bomb is not a valid target until you
+-- have passed it to somebody else, which breaks the trade. Set it back to
+-- false to feel the unfixed version again.
+--
+Config.BLOCK_INSTANT_PASS_BACK = true
+
+-- The rule above is right for a crowd and WRONG for a one-on-one: with two
+-- players left, the only person you could pass to is the one it excludes, so
+-- the receiver would have no legal target at all and would be guaranteed to
+-- explode. The round would end by decree rather than by play.
+--
+-- So it only applies while at least this many players are still alive. Below
+-- that, the final duel is a real chase again -- and it is TIMER_MINIMUM_DUEL,
+-- not this rule, that stops the last two stalling forever.
+Config.PASS_BACK_MIN_PLAYERS = 3
 
 --=============================================================================
 -- THE EXPLOSION
@@ -107,6 +128,19 @@ Config.WALL_HEIGHT = 28 -- height of the perimeter walls
 Config.FLOOR_Y = 2 -- height of the arena floor surface
 Config.ARENA_CENTER = Vector3.new(0, Config.FLOOR_Y, 0)
 
+-- SPAWN HEIGHT. Players are placed by their ROOT, which sits about 3 studs
+-- above their feet -- not by their feet. Get this wrong and everyone starts the
+-- round standing inside the floor, gets shoved out by physics over the next
+-- second, and it reads as popping, jitter, or falling through the map.
+--
+-- 3.04 is measured, not assumed: an R15 character has HipHeight 2.0 and a
+-- 2-stud root part, so the root centre sits 2.0 + 1.0 = 3.04 above the soles.
+Config.SPAWN_ROOT_HEIGHT = 3.04
+
+-- A little daylight under the feet so a character never starts a frame
+-- intersecting the pad. They fall this far on spawn, which is imperceptible.
+Config.SPAWN_CLEARANCE = 0.15
+
 -- Height the spectator camera floats at, and how far out it orbits.
 Config.SPECTATOR_HEIGHT = 90
 Config.SPECTATOR_DISTANCE = 130
@@ -127,11 +161,14 @@ Config.SPECTATOR_ORBIT_SPEED = 0.08 -- radians per second
 --     every ability and every beacon, each respawning shortly after you take it
 --
 -- TURN THIS OFF BEFORE PUBLISHING, and before judging how the game feels.
-Config.TEST_MODE = true
+Config.TEST_MODE = false
 
 -- Sub-switches, only meaningful while TEST_MODE is on. Turn one off to test a
 -- narrower slice -- e.g. set TEST_NO_BOMB to false with two players to play a
 -- normal round while still having the showcase range available.
+-- Setting TEST_NO_BOMB to false with TEST_MODE on is the beacon-testing setup:
+-- a normal round with elimination, plus the showcase range so you can grab any
+-- beacon on demand instead of waiting for a random spawn.
 Config.TEST_NO_BOMB = true
 Config.TEST_SHOW_RANGE = true
 

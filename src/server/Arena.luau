@@ -182,16 +182,64 @@ function Arena.build(): Model
 	-- Ten evenly spaced points in a ring, all facing the middle. These are real
 	-- SpawnLocations so the arena still works if you strip out the game logic,
 	-- but the round manager also places players on them explicitly.
+	--
+	-- The arena is parented BEFORE the spawn ring is placed, because choosing
+	-- where players may stand means asking the physics engine what is already
+	-- there -- and nothing is queryable until it is in the workspace.
+	arena.Parent = workspace
+
 	spawnPoints = {}
 	local SPAWN_RADIUS = HALF - 22
+	-- The pad is 1 stud tall and sits on the floor, so its walkable surface is
+	-- one stud up. Players are placed by their ROOT, not their feet, so the
+	-- spawn point has to clear the pad top by a whole character's root height --
+	-- see Config.SPAWN_ROOT_HEIGHT for why, and what happens if it does not.
+	local PAD_THICKNESS = 1
+	local padTop = FLOOR_TOP + PAD_THICKNESS
+	local spawnY = padTop + Config.SPAWN_ROOT_HEIGHT + Config.SPAWN_CLEARANCE
+
+	--[[
+		Is there room for a player to stand here?
+
+		The ring is placed by formula and the low walls, pillars and crates are
+		placed by their own formulas, and NOTHING previously checked that the
+		two did not collide. Measured on 2026-07-29: four of the ten pads had a
+		low wall or a pillar standing in them, so those players spawned inside
+		solid geometry and were flung out by the physics solver.
+	]]
+	local STAND_SIZE = Vector3.new(2.5, 5.5, 2.5) -- roughly one R15 character
+	local function hasRoomAt(x: number, z: number): boolean
+		local centre = Vector3.new(x, padTop + STAND_SIZE.Y / 2, z)
+		for _, part in workspace:GetPartBoundsInBox(CFrame.new(centre), STAND_SIZE) do
+			if part.CanCollide and part:IsDescendantOf(arena) and part.Name ~= "Floor" then
+				return false
+			end
+		end
+		return true
+	end
+
 	for i = 1, 10 do
-		local angle = (i / 10) * math.pi * 2
-		local pos = Vector3.new(math.cos(angle) * SPAWN_RADIUS, FLOOR_TOP + 3, math.sin(angle) * SPAWN_RADIUS)
+		local baseAngle = (i / 10) * math.pi * 2
+
+		-- Slide around the ring until the spot is clear. Sweeping the angle
+		-- rather than the radius keeps the ring evenly spread and keeps every
+		-- player the same distance from the middle.
+		local angle = baseAngle
+		for step = 0, 12 do
+			local offset = math.rad(3 * math.ceil(step / 2)) * (if step % 2 == 0 then 1 else -1)
+			local try = baseAngle + offset
+			if hasRoomAt(math.cos(try) * SPAWN_RADIUS, math.sin(try) * SPAWN_RADIUS) then
+				angle = try
+				break
+			end
+		end
+
+		local pos = Vector3.new(math.cos(angle) * SPAWN_RADIUS, spawnY, math.sin(angle) * SPAWN_RADIUS)
 		local pad = build(
 			arena,
 			"Spawn" .. i,
-			Vector3.new(6, 1, 6),
-			CFrame.new(pos - Vector3.new(0, 2.5, 0)),
+			Vector3.new(6, PAD_THICKNESS, 6),
+			CFrame.new(pos.X, padTop - PAD_THICKNESS / 2, pos.Z),
 			COLOR_TRIM,
 			Enum.Material.Neon,
 			"SpawnLocation"
@@ -201,7 +249,6 @@ function Arena.build(): Model
 		spawnPoints[i] = CFrame.lookAt(pos, Vector3.new(0, pos.Y, 0))
 	end
 
-	arena.Parent = workspace
 	model = arena
 	return arena
 end

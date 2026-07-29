@@ -25,18 +25,33 @@ To build a standalone place file instead:
 rojo build -o "Test1.rbxlx"
 ```
 
-## Testing on your own
+## Testing
 
-`Config.SOLO_TEST_MODE` is currently `true`, which lets a round start with a
-single player. Press Play by yourself and you will get the bomb, have nobody to
-pass it to, and blow up -- which is the quickest way to check the explosion
-looks right.
+To test actual passing, use two characters. In Studio open the **Test** tab ->
+**Clients and Servers** -> set players to 2 and click **Start**.
 
-**Set it to `false` before you publish**, or single players will be blown up on
-an endless loop with no game around it.
+### Grabbing a beacon on demand
 
-To test actual passing you need two or more characters. In Studio use the
-**Test** tab -> **Clients and Servers** -> set players to 2 and click **Start**.
+Waiting for a random spawn is slow when you want to test one specific event.
+Set `TEST_MODE = true` **and** `TEST_NO_BOMB = false`: a normal round runs, with
+elimination, and the showcase range is there too, holding one of every ability
+and beacon and respawning each one a few seconds after you take it. Raising
+`TIMER_START` gives you longer between explosions to try things.
+
+Put all three back afterwards -- `TEST_MODE = false`, `TEST_NO_BOMB = true`,
+`TIMER_START = 15` -- or you are not judging the real game.
+
+### Playing alone
+
+Set `Config.SOLO_TEST_MODE = true` to let a round start with a single player.
+Press Play by yourself and you will get the bomb, have nobody to pass it to, and
+blow up -- the quickest way to check the explosion looks right.
+
+**Set it back to `false` before you publish**, or single players will be blown
+up on an endless loop with no game around it.
+
+Note that `TEST_MODE` overrides it: while `TEST_MODE` is `true` nobody is ever
+given the bomb, so the two switches do not combine.
 
 ## Seeing the map in Studio
 
@@ -91,7 +106,7 @@ picking up another replaces it rather than stacking.
 | | What it does | How to use it |
 |---|---|---|
 | Dash | Fires you forwards ~17 studs | Shift / gamepad X / on-screen button |
-| Double Jump | An extra jump | Jump again at the top of your arc |
+| Fart Jump | An extra jump | Jump again at the top of your arc |
 | Sneakers | 1.5x speed for 8 seconds | Shift / gamepad X / on-screen button |
 
 **Beacons** go off the moment you touch them and change the map for *everyone*.
@@ -121,7 +136,8 @@ You would also need to name the model `Arena`, add SpawnLocations, and update
 
 | File | What it does |
 |---|---|
-| `src/shared/Config.luau` | **Every number worth tuning.** Start here. |
+| `BALANCE.md` | **The dials that change how the game plays.** Start here to tune |
+| `src/shared/Config.luau` | Every number, with the full reasoning beside each one |
 | `src/shared/Abilities.luau` | The catalogue of every pickup and how often it spawns |
 | `src/shared/Remotes.luau` | The channels the server uses to update screens |
 | `src/server/RoundManager.luau` | All the rules: timers, passing, elimination |
@@ -163,23 +179,45 @@ are swapped for swinging ones and the body is thrown. Health is never touched.
 
 ## Things you might want to change first
 
-All in `src/shared/Config.luau`:
+See **`BALANCE.md`** -- the curated list of the ~25 numbers that change how the
+game plays, grouped by what they affect, with a "if it feels wrong, start here"
+table and a log of what has been changed and why.
 
-- `TIMER_START`, `TIMER_DECAY_PER_PASS`, `TIMER_MINIMUM` -- the pace of a round
+The quickest four:
+
+- `TIMER_START` -- the pace of a round, and the biggest single dial
 - `PASS_RADIUS` -- how close you must get to pass it (5 studs is about arm's length)
 - `LAUNCH_SPEED` -- how far the exploded player flies
-- `ARENA_SIZE` -- how big the map is
 - `MIN_PLAYERS` -- how many players a real round needs
 
-## Known trade-off
+## Known trade-off — confirmed, and fixed
 
 Two players who simply stand next to each other can trade the bomb back and
 forth every second forever, because the timer floor (5s) is longer than the pass
-cooldown (1s). If you see that happen in a playtest, set
-`Config.BLOCK_INSTANT_PASS_BACK = true` -- that stops you handing the bomb
-straight back to whoever gave it to you, which breaks the trade.
+cooldown (1s). This was predicted, then **confirmed in a two-client playtest**:
+they really do ping-pong.
 
-It ships **off** so you can judge the plain version first.
+`Config.BLOCK_INSTANT_PASS_BACK` is therefore now **on**. It stops you handing
+the bomb straight back to whoever gave it to you, which breaks the trade. Set it
+back to `false` to feel the unfixed version.
+
+On its own that rule would have broken the final duel: with two players left the
+only person you could pass to is the one it excludes, so whoever received the
+bomb one-on-one would have had no legal target at all and been guaranteed to
+explode. The round would end, but by decree rather than by play.
+
+So the rule only applies while **three or more** players are alive
+(`Config.PASS_BACK_MIN_PLAYERS`). The final duel is a real chase again, and is
+ended by the clock instead: with two players left the timer keeps shrinking past
+its usual 5s floor, down to `Config.TIMER_MINIMUM_DUEL` (0.75s).
+
+```
+15 -> 13 -> 11 -> 9 -> 7 -> 5 -> 3 -> 1
+```
+
+Because that floor is shorter than the 1 second you must wait before you are
+allowed to pass, the trade eventually cannot continue and somebody has to die.
+A duel speeds up until it breaks -- about seven passes.
 
 ## What has never actually been tested
 
@@ -188,9 +226,13 @@ this project was verified by running it and measuring; these were not.
 
 **Needs two clients** (Studio → Test → Clients and Servers):
 
-- Passing the bomb between real players. Every timer, elimination and pickup
-  path is verified solo, but the pass itself has only ever been measured as a
-  distance check, never actually performed by two people.
+- ~~Passing the bomb between real players.~~ **Done 2026-07-29** — the pass
+  fires, and the trade-back stalemate it was suspected of allowing is real.
+- **The fix for that stalemate has not been played.** The three-or-more rule and
+  the shrinking duel timer are verified as logic — the timer provably reaches a
+  value shorter than the pass cooldown, so a duel must end — but nobody has
+  played a one-on-one to the finish. Whether it feels tense or merely abrupt is
+  unknown.
 - Reverse Controls exempting the activator. The rule is verified by driving
   `Humanoid:Move` directly; it has never run with two real players.
 - The Brain Rot NPC choosing between several possible victims.
