@@ -176,8 +176,6 @@ data or real money. The arena could only ever produce a funny explosion.
 
 ---
 
-## Also deliverable
+## Also deliverable — DONE
 
-Write `PLANNING_PROMPT.md` into the repo — the reusable prompt for running
-future features this same way, committed so it survives context being cleared
-and sits next to the other project docs.
+`PLANNING_PROMPT.md` is written and committed. Nothing to do here.

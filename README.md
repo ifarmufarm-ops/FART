@@ -25,18 +25,26 @@ To build a standalone place file instead:
 rojo build -o "Test1.rbxlx"
 ```
 
-## Testing on your own
+## Testing
 
-`Config.SOLO_TEST_MODE` is currently `true`, which lets a round start with a
-single player. Press Play by yourself and you will get the bomb, have nobody to
-pass it to, and blow up -- which is the quickest way to check the explosion
-looks right.
+The game currently sits in **playtest dress**: `TEST_MODE` and `SOLO_TEST_MODE`
+are both `false` and `TIMER_START` is back to its real 15 seconds. A round needs
+two players and plays exactly as a real one would.
 
-**Set it to `false` before you publish**, or single players will be blown up on
-an endless loop with no game around it.
+To test actual passing, use two characters. In Studio open the **Test** tab ->
+**Clients and Servers** -> set players to 2 and click **Start**.
 
-To test actual passing you need two or more characters. In Studio use the
-**Test** tab -> **Clients and Servers** -> set players to 2 and click **Start**.
+### Playing alone
+
+Set `Config.SOLO_TEST_MODE = true` to let a round start with a single player.
+Press Play by yourself and you will get the bomb, have nobody to pass it to, and
+blow up -- the quickest way to check the explosion looks right.
+
+**Set it back to `false` before you publish**, or single players will be blown
+up on an endless loop with no game around it.
+
+Note that `TEST_MODE` overrides it: while `TEST_MODE` is `true` nobody is ever
+given the bomb, so the two switches do not combine.
 
 ## Seeing the map in Studio
 
@@ -91,7 +99,7 @@ picking up another replaces it rather than stacking.
 | | What it does | How to use it |
 |---|---|---|
 | Dash | Fires you forwards ~17 studs | Shift / gamepad X / on-screen button |
-| Double Jump | An extra jump | Jump again at the top of your arc |
+| Fart Jump | An extra jump | Jump again at the top of your arc |
 | Sneakers | 1.5x speed for 8 seconds | Shift / gamepad X / on-screen button |
 
 **Beacons** go off the moment you touch them and change the map for *everyone*.

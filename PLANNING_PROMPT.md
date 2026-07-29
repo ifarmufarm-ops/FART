@@ -17,7 +17,7 @@ Read these first, in this order, before asking me anything or proposing work:
   2. LOBBY_PLAN.md        -- the agreed next piece of work, already decided
   3. src/shared/Config.luau -- every tunable, commented in gameplay terms
   4. MAP_INTEGRATION.md   -- only if the task involves maps
-  5. git log              -- the three commit messages explain the whole build
+  5. git log              -- the commit messages explain the whole build
 
 Then tell me, briefly:
   - what you understand the current state to be

@@ -19,7 +19,7 @@ Config.MIN_PLAYERS = 2
 -- bomb, have nobody to pass it to, and explode -- which is exactly what you
 -- want when checking the explosion looks right.
 -- SET THIS TO FALSE BEFORE PUBLISHING.
-Config.SOLO_TEST_MODE = true
+Config.SOLO_TEST_MODE = false
 
 -- Countdown shown between rounds, in seconds.
 Config.INTERMISSION_SECONDS = 8
@@ -34,9 +34,7 @@ Config.ROUND_OVER_SECONDS = 6
 -- time: 15s -> 13s -> 11s -> 9s ... down to the floor below. That guarantees
 -- every cycle ends instead of two fast players trading it forever.
 
--- TESTING VALUE: raised from 15 to 30 to give more room to try things out
--- mid-round. Put this back to 15 before you judge how the game actually feels.
-Config.TIMER_START = 30 -- seconds the first holder of a cycle gets
+Config.TIMER_START = 15 -- seconds the first holder of a cycle gets
 Config.TIMER_DECAY_PER_PASS = 2 -- seconds removed from the timer on each pass
 Config.TIMER_MINIMUM = 5 -- the timer never drops below this
 
@@ -127,7 +125,7 @@ Config.SPECTATOR_ORBIT_SPEED = 0.08 -- radians per second
 --     every ability and every beacon, each respawning shortly after you take it
 --
 -- TURN THIS OFF BEFORE PUBLISHING, and before judging how the game feels.
-Config.TEST_MODE = true
+Config.TEST_MODE = false
 
 -- Sub-switches, only meaningful while TEST_MODE is on. Turn one off to test a
 -- narrower slice -- e.g. set TEST_NO_BOMB to false with two players to play a
