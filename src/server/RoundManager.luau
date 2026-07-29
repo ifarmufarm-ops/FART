@@ -241,6 +241,23 @@ end
 	uses this to decide who to put back on their feet, so it has to go false as
 	soon as somebody opts out, not when the round eventually ends.
 ]]
+--[[
+	Everybody in the round right now, for anything that must not touch the
+	lobby. A copy, so a caller cannot reach in and change the roster.
+
+	When no round is running this returns EVERYONE, and that is deliberate.
+	Test Mode's sandbox has no queue and no round, but everybody present is
+	playing in it -- returning nobody there would leave the showcase range's
+	beacons affecting no one at all. Outside a round there are no modifiers
+	running to leak anyway, because the round's end clears them.
+]]
+function RoundManager.getRoundMembers(): { Player }
+	if not roundActive then
+		return Players:GetPlayers()
+	end
+	return table.clone(roundMembers)
+end
+
 function RoundManager.isInRound(player: Player): boolean
 	return roundActive and isRoundMember(player)
 end

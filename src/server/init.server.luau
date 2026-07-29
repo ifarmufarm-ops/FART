@@ -23,6 +23,7 @@ local AbilityService = require(script.AbilityService)
 local Arena = require(script.Arena)
 local Bomb = require(script.Bomb)
 local Lobby = require(script.Lobby)
+local Modifiers = require(script.Modifiers)
 local Queue = require(script.Queue)
 local Ragdoll = require(script.Ragdoll)
 local RoundManager = require(script.RoundManager)
@@ -42,6 +43,21 @@ AbilityService.start(RoundManager.isAlive)
 -- stays in the lobby and is left entirely alone by the round.
 RoundManager.setParticipantProvider(Queue.getQueued)
 Queue.start()
+
+-- Beacon events reach the round and nothing else. Tiny Mode and Reverse
+-- Controls are scoped by this; Ice Shoes was already safe, because it freezes
+-- whatever carries the floor tag and the lobby floor deliberately does not.
+--
+-- LOW GRAVITY IS STILL GLOBAL AND STILL LEAKS. workspace.Gravity is a single
+-- property for the whole place, so it cannot be scoped -- it has to be rebuilt
+-- as a per-character force. That is the remaining piece of stage 1d; see
+-- LOBBY_PLAN.md.
+--
+-- The list is "everyone in the round", not "everyone still alive": a player who
+-- has been blown up is still standing in the arena watching, and un-shrinking
+-- them mid-round would look like a bug. Outside a round it is everyone, which
+-- is what keeps Test Mode's sandbox working.
+Modifiers.setParticipantProvider(RoundManager.getRoundMembers)
 
 -- Anybody in the lobby who loses their body gets it straight back. The one
 -- exception is a player who is part of a round that is actually running: they

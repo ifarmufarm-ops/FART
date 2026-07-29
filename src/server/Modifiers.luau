@@ -38,6 +38,41 @@ type Running = {
 local running: { [string]: Running } = {}
 local tokenCounter = 0
 
+--[[
+	Who the beacon events are allowed to touch.
+
+	Beacons are global BY DESIGN -- one player grabs Tiny Mode and everybody
+	shrinks -- and that was exactly right while the whole server was in the
+	round. With a lobby it is not: somebody standing in the lobby should not
+	shrink, or have their controls inverted, because of something that happened
+	600 studs away in a game they are not playing.
+
+	Wired from init.server.luau, same arrangement as RoundManager's participant
+	provider. The default is everybody, so Test Mode's sandbox -- where there is
+	no queue and everyone present is playing -- behaves exactly as it always did.
+
+	NOTE the asymmetry below: effects are APPLIED to participants only, but
+	REVERTED for everybody. Restoring someone who was never affected is a no-op,
+	and doing it that way means a player who leaves the round mid-modifier
+	cannot be left permanently shrunk.
+]]
+local getParticipants: () -> { Player } = function()
+	return Players:GetPlayers()
+end
+
+function Modifiers.setParticipantProvider(provider: () -> { Player })
+	getParticipants = provider
+end
+
+local function isParticipant(player: Player): boolean
+	for _, other in getParticipants() do
+		if other == player then
+			return true
+		end
+	end
+	return false
+end
+
 local function now(): number
 	return workspace:GetServerTimeNow()
 end
@@ -55,7 +90,16 @@ local function broadcast()
 			activatorUserId = entry.activatorUserId,
 		})
 	end
-	Remotes.ModifierChanged:FireAllClients(list)
+	-- Players in the round get the real list. Everybody else is sent an EMPTY
+	-- one rather than being skipped: the client drives the frost tint and the
+	-- reverse-controls override off this message, so a lobby player who is
+	-- simply not told would keep whatever they last had. An empty list is what
+	-- actively clears them -- including for somebody who walks out of a round
+	-- while Reverse Controls is still running.
+	local empty = {}
+	for _, player in Players:GetPlayers() do
+		Remotes.ModifierChanged:FireClient(player, if isParticipant(player) then list else empty)
+	end
 end
 
 --=============================================================================
@@ -143,7 +187,9 @@ end
 
 local TinyMode = {
 	apply = function()
-		for _, player in Players:GetPlayers() do
+		-- Participants only: nobody in the lobby should shrink because of a
+		-- beacon in a round they are not in.
+		for _, player in getParticipants() do
 			if player.Character then
 				setScale(player.Character, Config.TINY_SCALE)
 			end
@@ -333,6 +379,14 @@ end
 	Hooked into RoundManager's watchCharacters.
 ]]
 function Modifiers.applyToCharacter(character: Model)
+	-- A body spawning in the LOBBY must not pick up the round's effects. Without
+	-- this, anybody respawning while Tiny Mode was running would come back
+	-- shrunk despite never having been in the round.
+	local owner = Players:GetPlayerFromCharacter(character)
+	if owner and not isParticipant(owner) then
+		return
+	end
+
 	for id in running do
 		local definition = definitions[id]
 		if definition and definition.onCharacter then

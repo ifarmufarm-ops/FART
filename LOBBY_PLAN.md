@@ -28,9 +28,9 @@ design work in this stage.
 
 | Event | Leaks into the lobby? | Fix |
 |---|---|---|
-| **Ice Shoes** | Only if the lobby floor is tagged | Don't tag it. Trivial |
-| **Tiny Mode** | Yes — iterates every player | Iterate the round's players instead. Trivial |
-| **Reverse Controls** | Yes — `FireAllClients` | Send to round participants only. Trivial |
+| **Ice Shoes** | ~~Only if the lobby floor is tagged~~ **DONE** | Lobby floor is untagged, asserted in testing |
+| **Tiny Mode** | ~~Yes — iterates every player~~ **DONE** | Applies to round members; reverts for everyone, so nobody can be left shrunk |
+| **Reverse Controls** | ~~Yes — `FireAllClients`~~ **DONE** | `ModifierChanged` goes per-player; non-participants get an empty list, which actively clears their client effects |
 | **Brain Rot** | No | Already scoped: lives in the arena, targets `getAlive()` |
 | **Low Gravity** | **Yes, and cannot be scoped as written** | Needs a rewrite — see below |
 
