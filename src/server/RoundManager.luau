@@ -81,6 +81,21 @@ function RoundManager.setReturnToLobby(handler: (Player) -> boolean)
 	returnToLobby = handler
 end
 
+--[[
+	How to send somebody up to the ghost area, and how to bring them back down.
+	Wired from init.server.luau, same as everything else here, so this file does
+	not have to know the ghost area exists.
+]]
+local sendToGhost: (Player) -> boolean = function()
+	return false
+end
+local clearGhost: (Player) -> () = function() end
+
+function RoundManager.setGhostHandlers(send: (Player) -> boolean, clear: (Player) -> ())
+	sendToGhost = send
+	clearGhost = clear
+end
+
 --=============================================================================
 -- SMALL HELPERS
 --=============================================================================
@@ -165,6 +180,10 @@ local roundMembers: { Player } = {}
 -- round carries on -- and falling back to broadcasting at everyone then would
 -- undo the very thing they asked for.
 local roundActive = false
+
+-- Everybody knocking about in the arena between rounds. Not in a round, but
+-- very much in the arena, and they should be able to use the pickups.
+local freePlay: { Player } = {}
 
 local function isRoundMember(player: Player): boolean
 	for _, member in roundMembers do
@@ -271,6 +290,30 @@ function RoundManager.getRoundMembers(): { Player }
 		return Players:GetPlayers()
 	end
 	return table.clone(roundMembers)
+end
+
+--[[
+	Everybody currently IN THE ARENA -- which is not the same as everybody in a
+	round, because of the free-for-all between rounds.
+
+	Three cases:
+	  * a round running   -> its members
+	  * between rounds    -> whoever came back down for free play
+	  * Test Mode sandbox -> everyone, since that is what a sandbox is
+
+	This is what the pickups and the beacon events use. Getting it from `alive`
+	instead would mean nobody could pick anything up between rounds, since
+	nobody is alive in a round that has finished -- and getting it from "everyone"
+	would let a beacon in the arena reach somebody standing in the lobby.
+]]
+function RoundManager.getArenaPlayers(): { Player }
+	if phase == "Sandbox" then
+		return Players:GetPlayers()
+	end
+	if roundActive then
+		return table.clone(roundMembers)
+	end
+	return table.clone(freePlay)
 end
 
 function RoundManager.isInRound(player: Player): boolean
@@ -432,11 +475,19 @@ local function eliminate(player: Player)
 		Ragdoll.apply(character)
 		Ragdoll.launch(character)
 
-		-- Let the body fly and settle, then remove it. The client notices the
-		-- character is gone and switches to the spectator camera.
+		-- Let the body fly and settle, then take them up to the ghost area with
+		-- a fresh one. Losing your body entirely and watching a drifting camera
+		-- is a long time to spend doing nothing; up there you can walk about
+		-- and watch the rest of the round through the glass.
 		task.delay(Config.CORPSE_LIFETIME, function()
 			if character and character.Parent then
 				character:Destroy()
+			end
+			-- Only if the round is still going. If it ended while the body was
+			-- in the air, everybody is about to be put back in the arena
+			-- anyway and sending them up first would be a pointless round trip.
+			if phase == "Playing" and player.Parent == Players then
+				sendToGhost(player)
 			end
 		end)
 	end
@@ -640,6 +691,7 @@ local function runRound()
 	-- eliminated so they can watch the finish. See roundMembers.
 	roundMembers = table.clone(alive)
 	roundActive = true
+	freePlay = {} -- the free-for-all is over; the round owns the arena again
 
 	spawnEveryone(alive)
 	pruneAlive()
@@ -780,30 +832,49 @@ local function runRound()
 		announce("No survivors.", COLOR_INFO, Config.ROUND_OVER_SECONDS)
 	end
 
-	-- Let them enjoy it, then tidy up just before the next round begins.
-	task.wait(math.max(0, Config.ROUND_OVER_SECONDS - Config.ROUND_CLEANUP_LEAD))
+	-- A few seconds on the winner, then EVERYBODY comes back into the arena --
+	-- winner, losers, ghosts, all of them -- and the map stays live.
+	--
+	-- That gap before the next round is deliberately a free-for-all: bodies but
+	-- no bomb, with pickups still spawning. It is the main chance a new player
+	-- gets to work out what the abilities do without a round riding on it, and
+	-- it is why nobody is sent back to the lobby here. The lobby is for people
+	-- who have chosen to stop playing, not a waiting room between rounds.
+	task.wait(Config.ROUND_OVER_SECONDS)
 
-	Pickups.setActive(false)
-	TestRange.setActive(false)
-	AbilityService.clearAll()
-	Modifiers.clearAll()
-
-	-- Everybody who was in this round goes back to the lobby, winner included.
-	-- Without this the winner is left standing in an empty arena until enough
-	-- players queue up for another round -- which, if nobody does, is forever.
-	-- Their body is moved rather than respawned, so winning does not look like
-	-- being killed for it.
-	for _, member in roundMembers do
+	local spawns = Arena.getShuffledSpawns()
+	freePlay = {}
+	for index, member in roundMembers do
 		if member.Parent == Players then
-			returnToLobby(member)
+			table.insert(freePlay, member)
+			clearGhost(member) -- solid again, and no longer treated as dead
+			task.spawn(function()
+				pcall(function()
+					member:LoadCharacter()
+				end)
+				local character = member.Character
+				if character and #spawns > 0 then
+					pcall(function()
+						character:PivotTo(spawns[((index - 1) % #spawns) + 1])
+					end)
+				end
+				if character then
+					Ragdoll.setCollisionGroup(character, Ragdoll.LIVE_GROUP)
+				end
+			end)
 		end
 	end
 
-	task.wait(Config.ROUND_CLEANUP_LEAD)
+	-- Hand the pickups over to the free-play crowd. Without this they would
+	-- keep asking `alive`, which is empty now the round is over, and nobody
+	-- would be able to pick anything up.
+	Pickups.setActive(true, RoundManager.getArenaPlayers)
 
-	-- The round is finished, so nobody is a member of it any more. Clearing
-	-- this hands every HUD back to the neutral lobby state, and stops the next
-	-- round's messages going to last round's players by accident.
+	announce("Free play -- next round soon", COLOR_INFO, 3)
+
+	-- The round itself is over even though everyone is still in the arena.
+	-- Clearing this hands every HUD back to the neutral state and stops the
+	-- next round's messages reaching last round's players by accident.
 	roundMembers = {}
 	roundActive = false
 	broadcast()
@@ -903,6 +974,15 @@ function RoundManager.start()
 			alive = {}
 			roundMembers = {} -- no round, so no round-only audience
 			roundActive = false
+			-- Not enough players to carry on, so the free-for-all ends too and
+			-- everybody left in the arena is put back in the lobby.
+			for _, player in freePlay do
+				if player.Parent == Players then
+					clearGhost(player)
+					returnToLobby(player)
+				end
+			end
+			freePlay = {}
 			duration = 0
 			deadline = 0
 			Bomb.detach()

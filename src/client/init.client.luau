@@ -525,10 +525,22 @@ RunService.RenderStepped:Connect(function(deltaTime)
 		and character.Parent ~= nil
 		and character:FindFirstChild("HumanoidRootPart") ~= nil
 
-	-- The way out of spectating, offered only while there is something to be let
-	-- out of: no body, and a round actually running. In the lobby between
-	-- rounds you already have a body, so it stays hidden.
-	leaveButton.Visible = not hasBody and (state.phase == "Playing" or state.phase == "RoundOver")
+	-- The way out of watching, offered only while there is something to be let
+	-- out of.
+	--
+	-- This cannot key off "have I got a body" any more: a knocked-out player is
+	-- a ghost up on the glass platform and very much has one. What marks them
+	-- out is being sent the round's HUD while not being on its list of the
+	-- living. Anyone in the lobby is sent the neutral state instead, so they
+	-- never match.
+	local iAmAlive = false
+	for _, userId in state.aliveUserIds do
+		if userId == player.UserId then
+			iAmAlive = true
+			break
+		end
+	end
+	leaveButton.Visible = state.phase == "Playing" and not iAmAlive
 
 	if not hasBody then
 		camera.CameraType = Enum.CameraType.Scriptable

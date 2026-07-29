@@ -22,6 +22,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local AbilityService = require(script.AbilityService)
 local Arena = require(script.Arena)
 local Bomb = require(script.Bomb)
+local GhostArea = require(script.GhostArea)
 local Lobby = require(script.Lobby)
 local Modifiers = require(script.Modifiers)
 local Queue = require(script.Queue)
@@ -31,6 +32,7 @@ local RoundManager = require(script.RoundManager)
 Ragdoll.setupCollisionGroups()
 Arena.build()
 Lobby.build()
+GhostArea.build() -- the glass platform knocked-out players watch from
 Queue.build() -- the pad sits on the lobby's plinth, so build it after the lobby
 Bomb.create()
 
@@ -63,6 +65,9 @@ RoundManager.setParticipantProvider(Queue.getQueued)
 -- until enough people queue for another round, which may never happen.
 RoundManager.setReturnToLobby(Lobby.sendToLobby)
 
+-- Where you go when you are blown up, and how you come back.
+RoundManager.setGhostHandlers(GhostArea.send, GhostArea.restore)
+
 Queue.start()
 
 -- Beacon events reach the round and nothing else. Tiny Mode and Reverse
@@ -78,7 +83,7 @@ Queue.start()
 -- has been blown up is still standing in the arena watching, and un-shrinking
 -- them mid-round would look like a bug. Outside a round it is everyone, which
 -- is what keeps Test Mode's sandbox working.
-Modifiers.setParticipantProvider(RoundManager.getRoundMembers)
+Modifiers.setParticipantProvider(RoundManager.getArenaPlayers)
 
 -- Anybody in the lobby who loses their body gets it straight back. The one
 -- exception is a player who is part of a round that is actually running: they
@@ -104,6 +109,13 @@ Lobby.startRespawner(function(player)
 	if phase == "Intermission" then
 		return false
 	end
+	-- A ghost who loses their body -- pressing Reset, most likely -- belongs
+	-- back on the glass platform, not in the lobby. Put them there and tell the
+	-- lobby to leave them alone.
+	if GhostArea.isGhost(player) then
+		GhostArea.send(player)
+		return true
+	end
 	return RoundManager.isInRound(player)
 end)
 
@@ -120,6 +132,10 @@ end)
 Remotes.LeaveRound.OnServerEvent:Connect(function(player)
 	if RoundManager.requestLeave(player) then
 		Queue.setQueued(player, false)
+		-- A ghost has a body already, so nothing would move them on its own --
+		-- they have to be carried down and made solid again explicitly.
+		GhostArea.restore(player)
+		Lobby.sendToLobby(player)
 	end
 end)
 

@@ -27,15 +27,33 @@ Config.SOLO_TEST_MODE = false
 -- time to notice a round was forming and get to the pad.
 Config.INTERMISSION_SECONDS = 16
 
--- How long the winner gets to celebrate before the next intermission begins.
--- 10 felt like standing about; 6 is enough to enjoy winning.
-Config.ROUND_OVER_SECONDS = 6
+-- How long the winner is on screen before everybody -- winners and losers --
+-- respawns in the arena to muck about until the next round starts.
+Config.ROUND_OVER_SECONDS = 4
 
--- The pickups and abilities stay live through that celebration, so the winner
--- can run around and mess with whatever is left on the floor instead of
--- watching a frozen map. This is how long BEFORE the celebration ends that
--- everything is tidied away, so the next round always starts from a clean map.
-Config.ROUND_CLEANUP_LEAD = 0.75
+-- The pickups and abilities stay live from the moment a round ends right
+-- through the countdown to the next one. That gap is deliberately a free-for-all
+-- in the arena: everybody has a body, nobody has the bomb, and the pickups keep
+-- coming. It is the main way a new player gets familiar with the abilities
+-- without a round riding on it. The next round clears everything and starts
+-- fresh, so nothing carries over.
+
+--=============================================================================
+-- THE GHOST AREA
+--=============================================================================
+-- Where you go when you are blown up, instead of watching from a drifting
+-- camera. A glass-floored platform directly above the arena: you keep a body,
+-- you are see-through, and you can walk about and watch the round finish
+-- underneath you.
+
+Config.GHOST_HEIGHT = 130 -- studs above the arena floor
+Config.GHOST_SIZE = 80 -- width and depth of the glass platform
+Config.GHOST_WALL_HEIGHT = 14 -- glass rail, so nobody wanders off the edge
+Config.GHOST_SPAWN_COUNT = 8
+
+-- How see-through a ghost is. 0 is solid, 1 is invisible. High enough to read
+-- as "not really here", low enough that you can still see each other.
+Config.GHOST_TRANSPARENCY = 0.65
 
 --=============================================================================
 -- THE BOMB TIMER
