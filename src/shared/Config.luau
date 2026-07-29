@@ -528,6 +528,39 @@ Config.BRAINROT_REPATH_INTERVAL = 0.8
 Config.BRAINROT_FACE = "rbxasset://textures/face.png"
 
 --=============================================================================
+-- STATS AND LEADERBOARDS
+--=============================================================================
+-- What the game counts, and what it shows for it. The catalogue of statistics
+-- itself -- their names, and which boards get a daily/weekly/monthly version --
+-- lives in src/shared/Stats.luau. See STATS_PLAN.md.
+
+Config.STATS_ENABLED = true
+
+-- Prints every single increment to the output. Useful while checking that
+-- something is counted where you think it is; very noisy otherwise.
+Config.STATS_DEBUG_LOG = false
+
+-- Do abilities used in the LOBBY count towards "Ability king"?
+--
+-- Off, and it matters: the practice range hands out an ability every couple of
+-- seconds forever, so counting them would let anybody top that board by
+-- standing in the lobby and never playing a round.
+Config.COUNT_PRACTICE_ABILITIES = false
+
+-- Which statistics appear in Roblox's own player list. Keep it to two or three
+-- -- more than that is unreadable on a phone, and all five show properly on the
+-- boards in the lobby anyway. Names must match ids in Stats.luau.
+Config.LEADERSTATS_COLUMNS = { "SurviveSeconds", "Passes" }
+
+-- How often the player list is repainted. A punch counter does not need to be
+-- frame-accurate, and a slow tick turns a burst of clicks into one update.
+Config.STATS_REFRESH_SECONDS = 1
+
+-- Least time between two punches that both count, in seconds. Without this an
+-- auto-clicker owns the punch board outright.
+Config.CLICKER_MIN_PUNCH_INTERVAL = 0.15
+
+--=============================================================================
 -- SOUNDS
 --=============================================================================
 -- These "rbxasset://" paths are built into every Roblox client, so they always

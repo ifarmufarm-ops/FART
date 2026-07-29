@@ -25,6 +25,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local Ragdoll = require(script.Parent.Ragdoll)
+local StatsService = require(script.Parent.StatsService)
 
 local AbilityService = {}
 
@@ -43,6 +44,21 @@ local bombHolders: { [Player]: boolean } = {}
 -- Set by start(). Answers "is this player actually in the round right now?"
 local isEligible: (Player) -> boolean = function()
 	return false
+end
+
+--[[
+	Answers "does this use belong on the leaderboard?", which is a different
+	question from "is this use allowed".
+
+	Wired from init.server.luau rather than required, because RoundManager
+	already requires this file and the two cannot require each other.
+]]
+local shouldCount: (Player) -> boolean = function()
+	return true
+end
+
+function AbilityService.setCountCheck(check: (Player) -> boolean)
+	shouldCount = check
 end
 
 --=============================================================================
@@ -365,6 +381,17 @@ local function onRequest(player: Player, requestKind: any)
 		slots[player] = nil
 	end
 	tellClient(player)
+
+	-- Counted here because this is the approval point: every branch above is a
+	-- rejection, and this runs before the effects, which could in principle
+	-- error. One use spent, one use counted.
+	--
+	-- Gated, because the lobby practice range hands abilities out every couple of
+	-- seconds forever -- counting those would let anybody top the board without
+	-- ever entering a round. See Config.COUNT_PRACTICE_ABILITIES.
+	if shouldCount(player) then
+		StatsService.add(player, "AbilityUses", 1)
+	end
 
 	if abilityId == "Sneakers" then
 		startSneakers(player)

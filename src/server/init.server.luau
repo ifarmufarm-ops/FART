@@ -17,6 +17,7 @@
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local AbilityService = require(script.AbilityService)
@@ -30,6 +31,7 @@ local PracticeRange = require(script.PracticeRange)
 local Queue = require(script.Queue)
 local Ragdoll = require(script.Ragdoll)
 local RoundManager = require(script.RoundManager)
+local StatsService = require(script.StatsService)
 
 Ragdoll.setupCollisionGroups()
 Arena.build()
@@ -87,6 +89,20 @@ RoundManager.setGhostHandlers(GhostArea.send, GhostArea.restore)
 GhostClicker.setPunchCheck(GhostArea.isGhost)
 
 Queue.start()
+
+-- Counting, the survive clock, and the numbers in Roblox's player list.
+StatsService.start()
+
+-- Which ability uses land on the leaderboard. Being ALLOWED to use one and
+-- having it COUNT are deliberately different questions: the lobby practice range
+-- hands them out endlessly, so counting those would make "Ability king" a
+-- measure of who stood in the lobby longest.
+AbilityService.setCountCheck(function(player: Player): boolean
+	if Config.COUNT_PRACTICE_ABILITIES then
+		return true
+	end
+	return RoundManager.isAlive(player)
+end)
 
 -- The lobby's practice range: abilities only, always available. The eligibility
 -- check above is what makes it actually work -- without it every ability used
