@@ -162,6 +162,19 @@ Config.LOBBY_SIZE = 110 -- width and depth of the lobby floor, in studs
 Config.LOBBY_WALL_HEIGHT = 22 -- perimeter walls, so nobody wanders into the void
 Config.LOBBY_SPAWN_COUNT = 8 -- pads in the ring players appear on
 
+-- THE QUEUE PAD. Stepping onto it puts you in the next round; stepping onto it
+-- again takes you back out. You have to step OFF and back ON to toggle, so
+-- standing on it does not flicker you in and out.
+--
+-- Queueing is STICKY: once you are in, you stay in for round after round until
+-- you step on the pad again. Nobody has to re-join between every game.
+Config.QUEUE_PAD_RADIUS = 7 -- how close you must get, in studs
+Config.QUEUE_CHECK_INTERVAL = 0.2 -- how often the pad looks for players
+
+-- Colours for the pad: waiting for you, and you-are-in.
+Config.QUEUE_COLOR_IDLE = Color3.fromRGB(126, 214, 255)
+Config.QUEUE_COLOR_ACTIVE = Color3.fromRGB(120, 255, 150)
+
 -- Height the spectator camera floats at, and how far out it orbits.
 Config.SPECTATOR_HEIGHT = 90
 Config.SPECTATOR_DISTANCE = 130
