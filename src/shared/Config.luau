@@ -59,18 +59,24 @@ Config.PASS_COOLDOWN = 1
 -- more work for the server. 0.05 is 20 checks per second, which feels instant.
 Config.PASS_CHECK_INTERVAL = 0.05
 
--- ANTI-STALEMATE SWITCH. Off by default, because you asked for the plain
--- 1-second cooldown. Leave it off first and see how it plays.
+-- ANTI-STALEMATE SWITCH. Now ON, because the stalemate was CONFIRMED in a
+-- two-client playtest on 2026-07-29 -- two players standing next to each other
+-- really do ping-pong the bomb forever.
 --
--- The problem it solves: two players who just stand next to each other can
--- trade the bomb back and forth every second forever, because each pass resets
--- the timer to TIMER_MINIMUM (5s) which is longer than the 1s cooldown. The
--- round then never ends.
+-- The problem it solves: each pass resets the timer to TIMER_MINIMUM (5s),
+-- which is longer than the 1s PASS_COOLDOWN, so a pair can trade indefinitely
+-- and the round never ends.
 --
--- Turning this on blocks the player who just gave you the bomb from being a
--- valid target until you have passed it to somebody else, which kills the
--- trade. Flip it to true if you see players abusing this in a playtest.
-Config.BLOCK_INSTANT_PASS_BACK = false
+-- With this on, whoever just gave you the bomb is not a valid target until you
+-- have passed it to somebody else, which breaks the trade. Set it back to
+-- false to feel the unfixed version again.
+--
+-- KNOWN PROBLEM, not yet fixed: with exactly TWO players left there is only one
+-- other person to pass to, and this rule excludes them -- so whoever receives
+-- the bomb in a one-on-one has no legal target at all and is guaranteed to
+-- explode. The round ends, but by decree rather than by play. This rule is
+-- right for three or more players and wrong for two.
+Config.BLOCK_INSTANT_PASS_BACK = true
 
 --=============================================================================
 -- THE EXPLOSION
@@ -130,6 +136,9 @@ Config.TEST_MODE = false
 -- Sub-switches, only meaningful while TEST_MODE is on. Turn one off to test a
 -- narrower slice -- e.g. set TEST_NO_BOMB to false with two players to play a
 -- normal round while still having the showcase range available.
+-- Setting TEST_NO_BOMB to false with TEST_MODE on is the beacon-testing setup:
+-- a normal round with elimination, plus the showcase range so you can grab any
+-- beacon on demand instead of waiting for a random spawn.
 Config.TEST_NO_BOMB = true
 Config.TEST_SHOW_RANGE = true
 

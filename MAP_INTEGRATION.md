@@ -42,6 +42,33 @@ called once, from `RoundManager.spawnEveryone`.
 
 **Change to:** collect `SpawnLocation`s out of the map model instead.
 
+**Height is the part that goes wrong.** Observed in a playtest on 2026-07-29:
+players spawn embedded in the floor. `spawnEveryone` uses `character:PivotTo(cf)`,
+and a character's pivot is its **HumanoidRootPart**, whose centre sits about
+**3 studs above the soles of its feet** on both R6 and R15. So the spawn `CFrame`
+has to be 3 studs above the surface you want the player standing on — measured
+from the **top of the spawn pad**, not the floor underneath it.
+
+The generated arena gets this wrong by exactly the pad's height:
+
+```
+pad top   = FLOOR_TOP + 1        (pad is 1 stud tall, sitting on the floor)
+spawn Y   = FLOOR_TOP + 3        (Arena.luau, in the spawn ring loop)
+feet land = FLOOR_TOP + 3 - 3    = FLOOR_TOP     <- 1 stud below the pad top
+```
+
+Whatever the map is, apply the same check: **feet = spawn Y minus 3**, and that
+must be at or just above the surface. Give it half a stud of clearance rather
+than landing it exactly, so a character never starts a frame intersecting
+anything. A hand-built map inherits this trap unchanged — `SpawnLocation`s
+pulled from a model are usually authored at *pad* height, which is the floor,
+not root height.
+
+Second cause worth ruling out on any map: the spawn ring is placed by formula
+and the scattered crates are placed by seeded random, so **nothing checks that a
+crate is not sitting on a spawn point**. On a hand-built map, keep spawn pads
+clear of props by eye, then verify by spawning ten characters at once.
+
 ### 2. Brain Rot NPC spawn — `src/server/BrainRot.luau`
 
 ```lua

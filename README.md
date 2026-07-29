@@ -27,12 +27,19 @@ rojo build -o "Test1.rbxlx"
 
 ## Testing
 
-The game currently sits in **playtest dress**: `TEST_MODE` and `SOLO_TEST_MODE`
-are both `false` and `TIMER_START` is back to its real 15 seconds. A round needs
-two players and plays exactly as a real one would.
-
 To test actual passing, use two characters. In Studio open the **Test** tab ->
 **Clients and Servers** -> set players to 2 and click **Start**.
+
+### Grabbing a beacon on demand
+
+Waiting for a random spawn is slow when you want to test one specific event.
+Set `TEST_MODE = true` **and** `TEST_NO_BOMB = false`: a normal round runs, with
+elimination, and the showcase range is there too, holding one of every ability
+and beacon and respawning each one a few seconds after you take it. Raising
+`TIMER_START` gives you longer between explosions to try things.
+
+Put all three back afterwards -- `TEST_MODE = false`, `TEST_NO_BOMB = true`,
+`TIMER_START = 15` -- or you are not judging the real game.
 
 ### Playing alone
 
@@ -179,15 +186,25 @@ All in `src/shared/Config.luau`:
 - `ARENA_SIZE` -- how big the map is
 - `MIN_PLAYERS` -- how many players a real round needs
 
-## Known trade-off
+## Known trade-off — confirmed, and fixed
 
 Two players who simply stand next to each other can trade the bomb back and
 forth every second forever, because the timer floor (5s) is longer than the pass
-cooldown (1s). If you see that happen in a playtest, set
-`Config.BLOCK_INSTANT_PASS_BACK = true` -- that stops you handing the bomb
-straight back to whoever gave it to you, which breaks the trade.
+cooldown (1s). This was predicted, then **confirmed in a two-client playtest**:
+they really do ping-pong.
 
-It ships **off** so you can judge the plain version first.
+`Config.BLOCK_INSTANT_PASS_BACK` is therefore now **on**. It stops you handing
+the bomb straight back to whoever gave it to you, which breaks the trade. Set it
+back to `false` to feel the unfixed version.
+
+**But it breaks the final duel.** With exactly two players left there is only
+one other person to pass to, and the rule excludes them. So the first player to
+receive the bomb in a one-on-one has *no legal target at all* and is guaranteed
+to explode. The round does end -- but by decree rather than by play, and the
+last two players have no say in it.
+
+The switch is right for three or more players and wrong for two. See the note
+in `Config.BLOCK_INSTANT_PASS_BACK` for the fix under consideration.
 
 ## What has never actually been tested
 
