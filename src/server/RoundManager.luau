@@ -44,6 +44,28 @@ local cycleDuration: number = Config.TIMER_START -- shrinks with every pass
 local receivedAt: number = 0 -- when the current holder got the bomb
 local previousHolder: Player? = nil -- who passed it to the current holder
 
+--[[
+	Who is actually playing.
+
+	This used to be "everybody connected to the server", which was right when
+	there was nowhere else to be. Now there is a lobby, so it is "everybody who
+	has asked to play" -- and the queue is what answers that.
+
+	Kept as a provider rather than a require so RoundManager and Queue do not
+	have to know about each other, the same arrangement Pickups and BrainRot
+	already use for the alive list. init.server.luau wires it up.
+
+	The default returns nobody, so a server with no queue wired in sits in
+	Waiting forever rather than dragging the whole lobby into a round.
+]]
+local getParticipants: () -> { Player } = function()
+	return {}
+end
+
+function RoundManager.setParticipantProvider(provider: () -> { Player })
+	getParticipants = provider
+end
+
 --=============================================================================
 -- SMALL HELPERS
 --=============================================================================
@@ -367,8 +389,8 @@ local function runIntermission()
 
 	while now() < deadline do
 		task.wait(0.25)
-		if #Players:GetPlayers() < minimumPlayers() then
-			return false -- someone left, fall back to Waiting
+		if #getParticipants() < minimumPlayers() then
+			return false -- someone left or unqueued, fall back to Waiting
 		end
 	end
 	return true
@@ -440,8 +462,10 @@ end
 local function runRound()
 	phase = "Playing"
 
+	-- Only the queue plays. Everyone else stays in the lobby, untouched by the
+	-- bomb, the pickups and the eliminations.
 	alive = {}
-	for _, player in Players:GetPlayers() do
+	for _, player in getParticipants() do
 		table.insert(alive, player)
 	end
 
@@ -684,7 +708,7 @@ function RoundManager.start()
 			AbilityService.clearAll()
 			broadcast()
 
-			while #Players:GetPlayers() < minimumPlayers() do
+			while #getParticipants() < minimumPlayers() do
 				task.wait(1)
 			end
 

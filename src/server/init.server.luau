@@ -19,17 +19,27 @@
 local AbilityService = require(script.AbilityService)
 local Arena = require(script.Arena)
 local Bomb = require(script.Bomb)
+local Lobby = require(script.Lobby)
 local Ragdoll = require(script.Ragdoll)
 local RoundManager = require(script.RoundManager)
 
 Ragdoll.setupCollisionGroups()
 Arena.build()
+Lobby.build()
 Bomb.create()
 
 -- AbilityService needs to know who is still in the round before it will honour
 -- an ability request. Passing the check in from here keeps the two files from
 -- having to require each other.
 AbilityService.start(RoundManager.isAlive)
+
+-- Who is in the round. STAGE 1a: nobody yet -- the queue pad arrives in the
+-- next stage, and until it does the server sits in Waiting and everybody stays
+-- in the lobby. Swapping this one function for Queue.getQueued() is the whole
+-- of the change that makes rounds pick their players.
+RoundManager.setParticipantProvider(function()
+	return {}
+end)
 
 RoundManager.start()
 

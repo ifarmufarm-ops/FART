@@ -141,6 +141,27 @@ Config.SPAWN_ROOT_HEIGHT = 3.04
 -- intersecting the pad. They fall this far on spawn, which is imperceptible.
 Config.SPAWN_CLEARANCE = 0.15
 
+--=============================================================================
+-- THE LOBBY
+--=============================================================================
+-- Where players stand when they are not in a round. Same place as the arena,
+-- just a long way away -- no loading screen, no teleport, and you can watch the
+-- arena in the distance if you walk to the edge.
+--
+-- IMPORTANT: the lobby floor deliberately does NOT carry Config.TAG_FLOOR.
+-- That tag is exactly what Ice Shoes looks for, so tagging the lobby would
+-- freeze it every time somebody in the arena grabbed the beacon. If the lobby
+-- ever needs its own floor behaviour, give it its own tag.
+
+-- Far enough from the arena (160 wide, centred on the origin) that nothing
+-- happening in one can reach the other. Explosions launch players at 90
+-- studs/s, so this is many times further than anyone can be thrown.
+Config.LOBBY_CENTER = Vector3.new(0, 2, 600)
+
+Config.LOBBY_SIZE = 110 -- width and depth of the lobby floor, in studs
+Config.LOBBY_WALL_HEIGHT = 22 -- perimeter walls, so nobody wanders into the void
+Config.LOBBY_SPAWN_COUNT = 8 -- pads in the ring players appear on
+
 -- Height the spectator camera floats at, and how far out it orbits.
 Config.SPECTATOR_HEIGHT = 90
 Config.SPECTATOR_DISTANCE = 130
