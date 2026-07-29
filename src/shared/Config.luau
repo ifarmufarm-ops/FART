@@ -38,6 +38,18 @@ Config.TIMER_START = 15 -- seconds the first holder of a cycle gets
 Config.TIMER_DECAY_PER_PASS = 2 -- seconds removed from the timer on each pass
 Config.TIMER_MINIMUM = 5 -- the timer never drops below this
 
+-- THE FINAL DUEL. When only two players are left the timer keeps shrinking past
+-- the floor above, down to this instead. That is what ends a one-on-one.
+--
+-- It has to be SHORTER than PASS_COOLDOWN (1s), because that is the whole
+-- mechanism: eventually the holder's timer is shorter than the time they must
+-- wait before they are allowed to pass at all, so the trade cannot continue and
+-- somebody has to die. The duel speeds up until it breaks.
+--
+-- Raise it towards 1 for a longer, tenser endgame; lower it to end duels
+-- sooner. At or above 1 the duel can run forever again.
+Config.TIMER_MINIMUM_DUEL = 0.75
+
 -- After someone explodes, does the timer go back up to TIMER_START for the
 -- next cycle? True = each cycle starts fresh at 15s. False = it keeps
 -- shrinking across the whole round, so late rounds are brutal.
@@ -71,12 +83,17 @@ Config.PASS_CHECK_INTERVAL = 0.05
 -- have passed it to somebody else, which breaks the trade. Set it back to
 -- false to feel the unfixed version again.
 --
--- KNOWN PROBLEM, not yet fixed: with exactly TWO players left there is only one
--- other person to pass to, and this rule excludes them -- so whoever receives
--- the bomb in a one-on-one has no legal target at all and is guaranteed to
--- explode. The round ends, but by decree rather than by play. This rule is
--- right for three or more players and wrong for two.
 Config.BLOCK_INSTANT_PASS_BACK = true
+
+-- The rule above is right for a crowd and WRONG for a one-on-one: with two
+-- players left, the only person you could pass to is the one it excludes, so
+-- the receiver would have no legal target at all and would be guaranteed to
+-- explode. The round would end by decree rather than by play.
+--
+-- So it only applies while at least this many players are still alive. Below
+-- that, the final duel is a real chase again -- and it is TIMER_MINIMUM_DUEL,
+-- not this rule, that stops the last two stalling forever.
+Config.PASS_BACK_MIN_PLAYERS = 3
 
 --=============================================================================
 -- THE EXPLOSION
@@ -110,6 +127,19 @@ Config.ARENA_SIZE = 160 -- width and depth of the playable floor, in studs
 Config.WALL_HEIGHT = 28 -- height of the perimeter walls
 Config.FLOOR_Y = 2 -- height of the arena floor surface
 Config.ARENA_CENTER = Vector3.new(0, Config.FLOOR_Y, 0)
+
+-- SPAWN HEIGHT. Players are placed by their ROOT, which sits about 3 studs
+-- above their feet -- not by their feet. Get this wrong and everyone starts the
+-- round standing inside the floor, gets shoved out by physics over the next
+-- second, and it reads as popping, jitter, or falling through the map.
+--
+-- 3.04 is measured, not assumed: an R15 character has HipHeight 2.0 and a
+-- 2-stud root part, so the root centre sits 2.0 + 1.0 = 3.04 above the soles.
+Config.SPAWN_ROOT_HEIGHT = 3.04
+
+-- A little daylight under the feet so a character never starts a frame
+-- intersecting the pad. They fall this far on spawn, which is imperceptible.
+Config.SPAWN_CLEARANCE = 0.15
 
 -- Height the spectator camera floats at, and how far out it orbits.
 Config.SPECTATOR_HEIGHT = 90

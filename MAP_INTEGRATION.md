@@ -42,32 +42,53 @@ called once, from `RoundManager.spawnEveryone`.
 
 **Change to:** collect `SpawnLocation`s out of the map model instead.
 
-**Height is the part that goes wrong.** Observed in a playtest on 2026-07-29:
-players spawn embedded in the floor. `spawnEveryone` uses `character:PivotTo(cf)`,
-and a character's pivot is its **HumanoidRootPart**, whose centre sits about
-**3 studs above the soles of its feet** on both R6 and R15. So the spawn `CFrame`
-has to be 3 studs above the surface you want the player standing on — measured
-from the **top of the spawn pad**, not the floor underneath it.
+**Height is the part that goes wrong.** Reported in a playtest on 2026-07-29 —
+players spawning inside the floor — then measured in Studio and fixed.
 
-The generated arena gets this wrong by exactly the pad's height:
+`spawnEveryone` uses `character:PivotTo(cf)`, and a character's pivot is its
+**HumanoidRootPart**, whose centre sits **3.04 studs above the soles of its
+feet** (measured, R15, `HipHeight` 2.0 plus half the 2-stud root part). So the
+spawn `CFrame` must be about 3 studs above the surface you want the player
+standing on — measured from the **top of the spawn pad**, not the floor
+underneath it.
+
+The generated arena was wrong by exactly the pad's height. Measured before the
+fix:
 
 ```
-pad top   = FLOOR_TOP + 1        (pad is 1 stud tall, sitting on the floor)
-spawn Y   = FLOOR_TOP + 3        (Arena.luau, in the spawn ring loop)
-feet land = FLOOR_TOP + 3 - 3    = FLOOR_TOP     <- 1 stud below the pad top
+floor top = 2.00
+pad top   = 3.00      (1-stud pad sitting on the floor)
+spawn Y   = 5.00      <- root placed here
+feet land = 1.96      <- 1.04 studs BELOW the pad top, and under the floor too
 ```
 
-Whatever the map is, apply the same check: **feet = spawn Y minus 3**, and that
-must be at or just above the surface. Give it half a stud of clearance rather
-than landing it exactly, so a character never starts a frame intersecting
-anything. A hand-built map inherits this trap unchanged — `SpawnLocation`s
-pulled from a model are usually authored at *pad* height, which is the floor,
-not root height.
+Physics then ejected the character upward over the following second, settling
+the root at 6.00. That eject is what players see as popping, jitter, or
+occasionally falling through.
 
-Second cause worth ruling out on any map: the spawn ring is placed by formula
-and the scattered crates are placed by seeded random, so **nothing checks that a
-crate is not sitting on a spawn point**. On a hand-built map, keep spawn pads
-clear of props by eye, then verify by spawning ten characters at once.
+Whatever the map is, apply the same check: **feet = spawn Y minus 3.04**, and
+that must land just *above* the surface. Give it a little clearance rather than
+landing it exactly, so a character never starts a frame intersecting anything.
+A hand-built map inherits this trap unchanged — `SpawnLocation`s are authored at
+*pad* height, which is not root height.
+
+### The second cause: props standing in the spawn pads
+
+Measured at the same time, and it was the bigger of the two. The spawn ring is
+placed by one formula and the low walls, pillars and crates by others, and
+**nothing checked that the two did not collide**. Four of the ten pads had a low
+wall or a pillar standing in them. A player spawning there started inside solid
+geometry and was flung out by the physics solver — one test character was
+ejected 2.8 studs and ended up standing on top of a low wall.
+
+`Arena.build()` now parents the arena *before* placing the spawn ring, so it can
+ask the physics engine what is already there, and slides each pad around the
+ring in 3° steps until a character-sized volume above it is clear. Re-measured
+after the change: **0 of 10 obstructed**.
+
+A hand-built map needs the same check by hand, or the same code pointed at its
+`SpawnLocation`s. Placing ten characters at once and looking for anyone standing
+inside a wall is the cheap version.
 
 ### 2. Brain Rot NPC spawn — `src/server/BrainRot.luau`
 

@@ -197,14 +197,23 @@ they really do ping-pong.
 the bomb straight back to whoever gave it to you, which breaks the trade. Set it
 back to `false` to feel the unfixed version.
 
-**But it breaks the final duel.** With exactly two players left there is only
-one other person to pass to, and the rule excludes them. So the first player to
-receive the bomb in a one-on-one has *no legal target at all* and is guaranteed
-to explode. The round does end -- but by decree rather than by play, and the
-last two players have no say in it.
+On its own that rule would have broken the final duel: with two players left the
+only person you could pass to is the one it excludes, so whoever received the
+bomb one-on-one would have had no legal target at all and been guaranteed to
+explode. The round would end, but by decree rather than by play.
 
-The switch is right for three or more players and wrong for two. See the note
-in `Config.BLOCK_INSTANT_PASS_BACK` for the fix under consideration.
+So the rule only applies while **three or more** players are alive
+(`Config.PASS_BACK_MIN_PLAYERS`). The final duel is a real chase again, and is
+ended by the clock instead: with two players left the timer keeps shrinking past
+its usual 5s floor, down to `Config.TIMER_MINIMUM_DUEL` (0.75s).
+
+```
+15 -> 13 -> 11 -> 9 -> 7 -> 5 -> 3 -> 1
+```
+
+Because that floor is shorter than the 1 second you must wait before you are
+allowed to pass, the trade eventually cannot continue and somebody has to die.
+A duel speeds up until it breaks -- about seven passes.
 
 ## What has never actually been tested
 
@@ -213,9 +222,13 @@ this project was verified by running it and measuring; these were not.
 
 **Needs two clients** (Studio → Test → Clients and Servers):
 
-- Passing the bomb between real players. Every timer, elimination and pickup
-  path is verified solo, but the pass itself has only ever been measured as a
-  distance check, never actually performed by two people.
+- ~~Passing the bomb between real players.~~ **Done 2026-07-29** — the pass
+  fires, and the trade-back stalemate it was suspected of allowing is real.
+- **The fix for that stalemate has not been played.** The three-or-more rule and
+  the shrinking duel timer are verified as logic — the timer provably reaches a
+  value shorter than the pass cooldown, so a duel must end — but nobody has
+  played a one-on-one to the finish. Whether it feels tense or merely abrupt is
+  unknown.
 - Reverse Controls exempting the activator. The rule is verified by driving
   `Humanoid:Move` directly; it has never run with two real players.
 - The Brain Rot NPC choosing between several possible victims.

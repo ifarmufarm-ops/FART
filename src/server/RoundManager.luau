@@ -187,8 +187,16 @@ local function findPassTarget(): Player?
 			continue
 		end
 		-- Optional rule: you cannot hand it straight back to whoever gave it
-		-- to you. See Config.BLOCK_INSTANT_PASS_BACK.
-		if Config.BLOCK_INSTANT_PASS_BACK and player == previousHolder then
+		-- to you. Only applies in a crowd -- in a one-on-one the excluded
+		-- player is the ONLY player, so applying it there would leave the
+		-- holder with no legal target and guarantee their death. The final
+		-- duel is ended by the shrinking timer instead.
+		-- See Config.BLOCK_INSTANT_PASS_BACK and Config.PASS_BACK_MIN_PLAYERS.
+		if
+			Config.BLOCK_INSTANT_PASS_BACK
+			and #alive >= Config.PASS_BACK_MIN_PLAYERS
+			and player == previousHolder
+		then
 			continue
 		end
 		local root = getRoot(player)
@@ -520,7 +528,11 @@ local function runRound()
 		if now() - receivedAt >= Config.PASS_COOLDOWN then
 			local target = findPassTarget()
 			if target then
-				cycleDuration = math.max(Config.TIMER_MINIMUM, cycleDuration - Config.TIMER_DECAY_PER_PASS)
+				-- In a one-on-one the timer keeps shrinking past the normal
+				-- floor, until it is shorter than the pass cooldown and the
+				-- trade physically cannot continue. That is what ends a duel.
+				local floor = if #alive <= 2 then Config.TIMER_MINIMUM_DUEL else Config.TIMER_MINIMUM
+				cycleDuration = math.max(floor, cycleDuration - Config.TIMER_DECAY_PER_PASS)
 				if giveBombTo(target) then
 					continue
 				end
