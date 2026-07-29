@@ -1,4 +1,48 @@
-# Reusable prompt: iterative feature design
+# Prompts for working on this project
+
+Two reusable prompts: one for picking the project back up after a break or a
+context reset, one for running a new feature.
+
+---
+
+## Prompt 1: resuming work
+
+```
+We are picking up Hot Potato Bomb, a Roblox game at this repo. You have no
+memory of previous sessions beyond your memory files and what is written here.
+
+Read these first, in this order, before asking me anything or proposing work:
+  1. README.md            -- what the game is, how to run it, and a section at
+                             the end listing what has never been tested
+  2. LOBBY_PLAN.md        -- the agreed next piece of work, already decided
+  3. src/shared/Config.luau -- every tunable, commented in gameplay terms
+  4. MAP_INTEGRATION.md   -- only if the task involves maps
+  5. git log              -- the three commit messages explain the whole build
+
+Then tell me, briefly:
+  - what you understand the current state to be
+  - what the agreed next step is
+  - anything in the docs that looks stale or contradictory
+
+Do NOT relitigate decisions already recorded in LOBBY_PLAN.md or your memory
+(one place not two, no concurrent arenas, the Low Gravity constraint). If you
+think one is wrong, say so in a sentence and let me decide -- do not silently
+redesign around it.
+
+To get set up:
+  - run `rojo serve` from the project root and ask me to click Connect in the
+    Studio plugin
+  - Config.TEST_MODE may still be true; check before assuming the game is in
+    its real form
+  - always stop Play, confirm the synced source, then start Play
+
+Before proposing anything, ask me how the game actually FELT to play. Numbers
+tell you the code works; only I can tell you whether it is any good.
+```
+
+---
+
+## Prompt 2: iterative feature design
 
 Paste this at the start of a new feature, replacing `[FEATURE]`. It encodes the
 working pattern from the abilities, beacons and NPC stages — the one that kept

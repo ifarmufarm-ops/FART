@@ -180,3 +180,30 @@ cooldown (1s). If you see that happen in a playtest, set
 straight back to whoever gave it to you, which breaks the trade.
 
 It ships **off** so you can judge the plain version first.
+
+## What has never actually been tested
+
+Kept deliberately, so nobody later assumes these are proven. Everything else in
+this project was verified by running it and measuring; these were not.
+
+**Needs two clients** (Studio → Test → Clients and Servers):
+
+- Passing the bomb between real players. Every timer, elimination and pickup
+  path is verified solo, but the pass itself has only ever been measured as a
+  distance check, never actually performed by two people.
+- Reverse Controls exempting the activator. The rule is verified by driving
+  `Humanoid:Move` directly; it has never run with two real players.
+- The Brain Rot NPC choosing between several possible victims.
+
+**Needs real hardware:**
+
+- The mobile touch button's position. It was placed by reasoning about where
+  the jump button sits, not by looking at it.
+- Console safe areas. TVs crop roughly 5% at the edges, and several HUD
+  elements sit 22px from an edge.
+- Gamepad play generally. The binding is confirmed present; nobody has held a
+  controller.
+
+**Needs a human eye.** Numbers can show limbs articulating 67 degrees and
+pickups spawning at the right rate. They cannot show whether the ragdoll looks
+right, whether eight pickups at once is too busy, or whether Ice Shoes is fun.
