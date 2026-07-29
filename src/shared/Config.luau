@@ -375,9 +375,25 @@ Config.ICE_TINT = Color3.fromRGB(150, 212, 255)
 
 -- LOW GRAVITY: Roblox's normal gravity is 196.2. Lower means floatier jumps
 -- and much longer hang time -- and much bigger explosions.
+--
+-- HOW THIS WORKS, because it is not what you would expect: Roblox has ONE
+-- gravity setting for the whole game world. There is no way to make it lower in
+-- the arena than in the lobby. Turning it down would make everybody float,
+-- including people who are not even playing.
+--
+-- So the game no longer touches it. Instead each player in the round gets a
+-- gentle upward push, sized to their own weight, which cancels out part of what
+-- gravity is doing to them. The feeling is the same; it just only happens to
+-- the people it should. Change LOW_GRAVITY_VALUE and the push is recalculated
+-- from it, so this still behaves like a gravity dial.
 Config.LOW_GRAVITY_DURATION = 20
 Config.LOW_GRAVITY_VALUE = 60
 Config.NORMAL_GRAVITY = 196.2
+
+-- How often the upward push is recalculated while Low Gravity is running.
+-- It has to be redone periodically because a player's weight changes -- Tiny
+-- Mode shrinks them -- and because anyone who respawns needs a fresh one.
+Config.LOW_GRAVITY_REFRESH = 0.5
 
 -- TINY MODE: everyone shrinks. 0.6 is 60% of normal height.
 Config.TINY_DURATION = 20

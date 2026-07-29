@@ -153,14 +153,119 @@ local IceShoes = {
 -- LOW GRAVITY
 --=============================================================================
 
+--[[
+	Roblox has ONE gravity setting for the whole game world, so the old version
+	of this -- turning workspace.Gravity down -- made everybody float, including
+	people standing in the lobby who were not playing. There is no per-area
+	gravity to switch to.
+
+	So this stopped touching gravity at all. Each player in the round instead
+	gets a steady upward push sized to their own weight, cancelling part of what
+	gravity is doing to them. Push someone upwards with (their weight x the
+	difference between normal and low gravity) and they behave exactly as if
+	gravity were the lower number -- for them alone.
+
+	The push is recalculated on a slow loop rather than set once, which is what
+	keeps it correct when a player's weight changes under them (Tiny Mode) and
+	when somebody respawns and needs a new one.
+]]
+local LIFT_NAME = "HotPotatoLowGravity"
+
+local function rootOf(character: Model): BasePart?
+	return character:FindFirstChild("HumanoidRootPart") :: BasePart?
+end
+
+local function applyLift(character: Model)
+	local root = rootOf(character)
+	if not root then
+		return
+	end
+
+	local force = root:FindFirstChild(LIFT_NAME) :: VectorForce?
+	if not force then
+		local point = Instance.new("Attachment")
+		point.Name = LIFT_NAME .. "Point"
+		point.Parent = root
+
+		force = Instance.new("VectorForce")
+		force.Name = LIFT_NAME
+		force.Attachment0 = point
+		-- Straight up in world terms, not relative to which way they are
+		-- facing, and applied at their centre of mass so it lifts rather than
+		-- tips them over.
+		force.RelativeTo = Enum.ActuatorRelativeTo.World
+		force.ApplyAtCenterOfMass = true
+		force.Parent = root
+	end
+
+	local lift = root.AssemblyMass * (Config.NORMAL_GRAVITY - Config.LOW_GRAVITY_VALUE)
+	force.Force = Vector3.new(0, lift, 0)
+end
+
+local function removeLift(character: Model)
+	local root = rootOf(character)
+	if not root then
+		return
+	end
+	local force = root:FindFirstChild(LIFT_NAME)
+	if force then
+		force:Destroy()
+	end
+	local point = root:FindFirstChild(LIFT_NAME .. "Point")
+	if point then
+		point:Destroy()
+	end
+end
+
+local function removeLiftFromEveryone()
+	for _, player in Players:GetPlayers() do
+		if player.Character then
+			removeLift(player.Character)
+		end
+	end
+end
+
+-- Bumped every time Low Gravity starts or stops, so an old refresh loop from a
+-- previous activation stops instead of fighting the current one.
+local liftToken = 0
+
 local LowGravity = {
 	apply = function()
-		workspace.Gravity = Config.LOW_GRAVITY_VALUE
+		liftToken += 1
+		local myToken = liftToken
+
+		task.spawn(function()
+			while liftToken == myToken do
+				local shouldHaveLift: { [Model]: boolean } = {}
+				for _, player in getParticipants() do
+					local character = player.Character
+					if character then
+						shouldHaveLift[character] = true
+						applyLift(character)
+					end
+				end
+				-- And take it off anybody who has since left the round, or been
+				-- given a new body that should not have it.
+				for _, player in Players:GetPlayers() do
+					local character = player.Character
+					if character and not shouldHaveLift[character] then
+						removeLift(character)
+					end
+				end
+				task.wait(Config.LOW_GRAVITY_REFRESH)
+			end
+		end)
 	end,
 
 	revert = function()
-		workspace.Gravity = Config.NORMAL_GRAVITY
+		liftToken += 1 -- stops the loop above
+		removeLiftFromEveryone()
 	end,
+
+	-- A body that spawns mid-event gets its push immediately rather than
+	-- waiting for the next refresh.
+	onCharacter = applyLift,
+	onCharacterEnd = removeLift,
 }
 
 --=============================================================================
@@ -262,7 +367,13 @@ type Definition = {
 
 local definitions: { [string]: Definition } = {
 	IceShoes = { apply = IceShoes.apply, revert = IceShoes.revert, duration = Config.ICE_DURATION },
-	LowGravity = { apply = LowGravity.apply, revert = LowGravity.revert, duration = Config.LOW_GRAVITY_DURATION },
+	LowGravity = {
+		apply = LowGravity.apply,
+		revert = LowGravity.revert,
+		onCharacter = LowGravity.onCharacter,
+		onCharacterEnd = LowGravity.onCharacterEnd,
+		duration = Config.LOW_GRAVITY_DURATION,
+	},
 	TinyMode = {
 		apply = TinyMode.apply,
 		revert = TinyMode.revert,
@@ -361,8 +472,13 @@ function Modifiers.clearAll()
 	for id in running do
 		stop(id)
 	end
-	-- Belt and braces: put the global values back even if nothing was running,
-	-- in case a round ended mid-apply.
+	-- Belt and braces: put everything back even if nothing was running, in case
+	-- a round ended mid-apply.
+	liftToken += 1
+	removeLiftFromEveryone()
+	-- Gravity is no longer touched by Low Gravity, but an older version of the
+	-- game did change it. Setting it back costs nothing and rescues a place
+	-- file that was saved while it was still turned down.
 	workspace.Gravity = Config.NORMAL_GRAVITY
 	IceShoes.revert()
 	BrainRot.despawn()

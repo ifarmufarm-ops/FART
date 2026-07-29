@@ -34,10 +34,25 @@ Lobby.build()
 Queue.build() -- the pad sits on the lobby's plinth, so build it after the lobby
 Bomb.create()
 
--- AbilityService needs to know who is still in the round before it will honour
--- an ability request. Passing the check in from here keeps the two files from
--- having to require each other.
-AbilityService.start(RoundManager.isAlive)
+-- AbilityService will not honour an ability request unless this says the player
+-- is allowed to use one. Passing the check in from here keeps the two files
+-- from having to require each other.
+--
+-- This used to be "are they alive in the round", which was right when the round
+-- was the only place to be. It is not any more: somebody in the LOBBY is not
+-- alive in a round, so every ability they tried to use would have been thrown
+-- away silently -- the pickup spent, nothing happening, and the HUD looking
+-- exactly as it does on success. That is the trap LOBBY_PLAN.md flagged, and
+-- it is fixed here BEFORE the lobby practice range exists to fall into it.
+--
+-- Allowed: alive in a round, or in the lobby. Deliberately NOT allowed: a
+-- player who has been blown up and is watching the rest of the round.
+AbilityService.start(function(player: Player): boolean
+	if RoundManager.isAlive(player) then
+		return true
+	end
+	return not RoundManager.isInRound(player)
+end)
 
 -- Who is in the round: everybody who has stepped on the queue pad. Anyone else
 -- stays in the lobby and is left entirely alone by the round.

@@ -32,7 +32,7 @@ design work in this stage.
 | **Tiny Mode** | ~~Yes — iterates every player~~ **DONE** | Applies to round members; reverts for everyone, so nobody can be left shrunk |
 | **Reverse Controls** | ~~Yes — `FireAllClients`~~ **DONE** | `ModifierChanged` goes per-player; non-participants get an empty list, which actively clears their client effects |
 | **Brain Rot** | No | Already scoped: lives in the arena, targets `getAlive()` |
-| **Low Gravity** | **Yes, and cannot be scoped as written** | Needs a rewrite — see below |
+| **Low Gravity** | ~~**Yes, and cannot be scoped as written**~~ **DONE** | Rewritten as a per-character upward force. No longer touches `workspace.Gravity` |
 
 ### Correction to my earlier draft
 
@@ -99,15 +99,15 @@ and expensive later.
 participant. That becomes **"everyone in the queue"**. Everything else here is
 mechanical; this is the change that matters.
 
-### PARKED — do this first in stage 1e (noted 2026-07-29)
+### The eligibility trap — FIXED (2026-07-29)
 
-Still armed, confirmed by audit. `init.server.luau` wires
-`AbilityService.start(RoundManager.isAlive)`, and nothing has changed that. It
-is harmless today only because there is no lobby practice range yet. The moment
-one exists, every ability used in it is silently rejected — pickup consumed,
-nothing happens, and the HUD looks identical to success.
+`init.server.luau` used to wire `AbilityService.start(RoundManager.isAlive)`,
+which would have thrown away every ability used in a lobby practice range —
+pickup spent, nothing happening, HUD identical to success.
 
-**Widen the eligibility check before building the practice range, not after.**
+Fixed **before** the practice range exists to fall into it. The check now
+allows anyone alive in a round *or* in the lobby, and still refuses a player
+who has been blown up and is watching the rest of the round.
 
 ### The trap that will bite
 
