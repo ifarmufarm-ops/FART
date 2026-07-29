@@ -228,9 +228,10 @@ end
 	player asking for this would be using it to escape the bomb, so the check is
 	a rule and not a formality. Returns true if they were released.
 
-	They stay in the queue, so they are back in for the next round without
-	having to touch the pad again. Handing them a body is left to the lobby's
-	own respawner, which is already watching for people without one.
+	This only releases them from the ROUND. Taking them out of the queue as well
+	is done by whoever wired the remote up -- see init.server.luau -- because
+	the queue is not this file's business. Handing them a body is left to the
+	lobby's own respawner, which is already watching for people without one.
 ]]
 --[[
 	Is this player part of the round that is running right now?
@@ -829,12 +830,6 @@ function RoundManager.start()
 			Bomb.detach()
 			holder = nil
 		end
-	end)
-
-	-- "Let me out of spectating." Validated in requestLeave -- a player who is
-	-- still alive is refused, so this can never be used to dodge the bomb.
-	Remotes.LeaveRound.OnServerEvent:Connect(function(player)
-		RoundManager.requestLeave(player)
 	end)
 
 	-- A slow repeat of the current state. Cheap insurance: if a client's HUD

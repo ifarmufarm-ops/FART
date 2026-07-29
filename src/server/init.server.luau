@@ -16,6 +16,9 @@
 		Shared/Abilities  the catalogue of what can spawn as a pickup
 ]]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
 local AbilityService = require(script.AbilityService)
 local Arena = require(script.Arena)
 local Bomb = require(script.Bomb)
@@ -56,6 +59,22 @@ Lobby.startRespawner(function(player)
 		return true -- Test Mode does its own respawning
 	end
 	return RoundManager.isInRound(player)
+end)
+
+-- "Back to the lobby", pressed by a player who has been blown up.
+--
+-- Two separate things happen, and the order matters: RoundManager decides
+-- whether they are allowed to go -- it refuses anyone still alive, so this can
+-- never be used to dodge the bomb -- and only if it agrees do they also come
+-- out of the queue. Pressing it means "I am done for now", so they will not be
+-- pulled into the next round; they step back on the pad when they want in.
+--
+-- The wiring lives here rather than in either module because it is the only
+-- place that knows about both.
+Remotes.LeaveRound.OnServerEvent:Connect(function(player)
+	if RoundManager.requestLeave(player) then
+		Queue.setQueued(player, false)
+	end
 end)
 
 RoundManager.start()

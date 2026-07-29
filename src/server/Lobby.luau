@@ -213,33 +213,6 @@ function Lobby.getModel(): Model?
 	return model
 end
 
---[[
-	Puts a player's existing character back in the lobby, without respawning
-	them. Used when a round ends and when somebody is done spectating.
-
-	Returns false if they had no character to move.
-]]
-function Lobby.sendToLobby(player: Player): boolean
-	local character = player.Character
-	if not character or not character.PrimaryPart then
-		return false
-	end
-	local spawns = Lobby.getShuffledSpawns()
-	if #spawns == 0 then
-		return false
-	end
-	local ok = pcall(function()
-		character:PivotTo(spawns[1])
-	end)
-	-- Kill any leftover momentum, or a player thrown by an explosion arrives in
-	-- the lobby still travelling at 90 studs a second.
-	if ok and character.PrimaryPart then
-		character.PrimaryPart.AssemblyLinearVelocity = Vector3.zero
-		character.PrimaryPart.AssemblyAngularVelocity = Vector3.zero
-	end
-	return ok
-end
-
 --=============================================================================
 -- KEEPING PEOPLE ON THEIR FEET
 --=============================================================================

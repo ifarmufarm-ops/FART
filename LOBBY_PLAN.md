@@ -99,6 +99,16 @@ and expensive later.
 participant. That becomes **"everyone in the queue"**. Everything else here is
 mechanical; this is the change that matters.
 
+### PARKED — do this first in stage 1e (noted 2026-07-29)
+
+Still armed, confirmed by audit. `init.server.luau` wires
+`AbilityService.start(RoundManager.isAlive)`, and nothing has changed that. It
+is harmless today only because there is no lobby practice range yet. The moment
+one exists, every ability used in it is silently rejected — pickup consumed,
+nothing happens, and the HUD looks identical to success.
+
+**Widen the eligibility check before building the practice range, not after.**
+
 ### The trap that will bite
 
 `init.server.luau` wires `AbilityService.start(RoundManager.isAlive)`, which
