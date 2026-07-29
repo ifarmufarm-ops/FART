@@ -87,6 +87,14 @@ Config.RESET_TIMER_AFTER_EXPLOSION = true
 -- PASSING THE BOMB
 --=============================================================================
 
+-- HOLDING THE BOMB MAKES YOU FASTER. Multiplies your walking speed while you
+-- have it, so a holder can realistically run somebody down instead of trudging
+-- after them at exactly their speed. 1.35 is 21.6 studs/s against a normal 16.
+--
+-- It stacks with Sneakers, so a holder wearing them moves at 16 x 2 x 1.35 =
+-- 43 studs/s -- terrifying, brief, and something you have to have earned.
+Config.BOMB_HOLDER_SPEED = 1.35
+
 -- How close the holder has to get to another player to pass it, in studs.
 -- Two players standing chest-to-chest are about 4 studs apart.
 Config.PASS_RADIUS = 5
@@ -327,6 +335,19 @@ Config.BASE_JUMP_POWER = 50
 Config.DASH_SPEED = 85
 Config.DASH_DURATION = 0.18
 
+-- THE GLIDE. Without this the dash stops dead: Roblox's character controller
+-- yanks you back to walking pace the instant the burst ends, which feels like
+-- hitting a wall and makes chaining two dashes together impossible.
+--
+-- So the dash hands over to a short slide instead, as though the floor were
+-- briefly icy. You keep moving, you can turn, and a second dash launched during
+-- the slide carries straight on from the first.
+Config.DASH_GLIDE_DURATION = 0.3
+
+-- How fast the slide starts, as a fraction of the dash itself. 1 would carry on
+-- at full dash speed (no slowing at all); 0 would remove the glide entirely.
+Config.DASH_GLIDE_STRENGTH = 0.55
+
 -- Dashing leaves a streak of smoke hanging in the air behind you rather than a
 -- solid ribbon. This is how thickly it pours out -- particles per second, for
 -- the length of the dash only. At 220 a 0.18s dash lays down about 40 puffs.
@@ -334,11 +355,11 @@ Config.DASH_SMOKE_RATE = 220
 
 -- FART JUMP: the upward kick of the second jump.
 --
--- Raised from 45 to 68 after playtesting. It used to sit just under a normal
--- jump (50) so it read as a small boost, and that made it the dullest of the
--- three abilities. Now it is clearly stronger than a normal jump, so using it
--- launches you somewhere a plain jump could not reach.
-Config.FART_JUMP_POWER = 68
+-- Raised from 45 to 68 and then to 75 after playtesting. It used to sit just
+-- under a normal jump (50) so it read as a small boost, and that made it the
+-- dullest of the three abilities. At 75 it is half again as strong as a normal
+-- jump, so using it clearly launches you somewhere you could not otherwise get.
+Config.FART_JUMP_POWER = 75
 
 -- You cannot fart jump until you are near the top of your first jump or
 -- already falling. This is the difference between the ability working and

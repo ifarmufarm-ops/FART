@@ -235,6 +235,22 @@ local function idleState()
 	}
 end
 
+--[[
+	Is this player in the queue? Wired from init.server.luau.
+
+	The round HUD -- the countdown, the bar, "waiting for players" -- is only
+	shown to people who have actually asked to play. Somebody wandering round
+	the lobby who has not stepped on the pad has no use for a countdown, and
+	showing them one implies the game is waiting on them when it is not.
+]]
+local isQueued: (Player) -> boolean = function()
+	return true -- until wired, show the HUD to everyone as before
+end
+
+function RoundManager.setQueueCheck(check: (Player) -> boolean)
+	isQueued = check
+end
+
 local function broadcast()
 	local ids = table.create(#alive)
 	for _, player in alive do
@@ -248,14 +264,12 @@ local function broadcast()
 		aliveUserIds = ids,
 	}
 
-	if not roundActive then
-		Remotes.StateChanged:FireAllClients(state)
-		return
-	end
-
-	local idle = idleState()
+	-- Every payload is per-player now, because "are you in the queue" differs
+	-- for each of them.
 	for _, player in Players:GetPlayers() do
-		Remotes.StateChanged:FireClient(player, if isRoundMember(player) then state else idle)
+		local mine = if roundActive and not isRoundMember(player) then idleState() else table.clone(state)
+		mine.queued = isQueued(player)
+		Remotes.StateChanged:FireClient(player, mine)
 	end
 end
 
@@ -367,6 +381,14 @@ local function giveBombTo(player: Player): boolean
 		return false
 	end
 
+	-- Carrying the bomb makes you faster, so the chase is a real chase rather
+	-- than two players jogging at identical speed. Hand it over BEFORE changing
+	-- who the holder is, so the person losing it drops back to normal.
+	if holder then
+		AbilityService.setBombHolder(holder, false)
+	end
+	AbilityService.setBombHolder(player, true)
+
 	previousHolder = holder
 	holder = player
 	receivedAt = now()
@@ -461,6 +483,10 @@ local function eliminate(player: Player)
 
 	local character = player.Character
 	local blastPosition = Bomb.getPosition()
+
+	-- Whatever happens next, they are not carrying it any more, so the speed
+	-- that came with it goes too.
+	AbilityService.setBombHolder(player, false)
 
 	if holder == player then
 		Bomb.detach()
@@ -1006,6 +1032,22 @@ function RoundManager.start()
 
 	task.spawn(function()
 		while true do
+			-- TEST MODE'S SANDBOX comes first and ignores the queue entirely.
+			--
+			-- It has to, and this was missed when rounds began taking their
+			-- players from the queue: the sandbox sat behind the same "enough
+			-- players queued" gate as a real round, so it waited forever for
+			-- somebody to step on a pad that Test Mode does not even ask you to
+			-- use. Test Mode has been quietly doing nothing ever since.
+			if Config.TEST_MODE and Config.TEST_NO_BOMB then
+				local sandboxOk, sandboxErr = pcall(runSandbox) -- never returns while TEST_MODE is on
+				if not sandboxOk then
+					warn("[Hot Potato] Sandbox stopped: " .. tostring(sandboxErr))
+					task.wait(2)
+				end
+				continue
+			end
+
 			-- Only tear the arena down if there is genuinely nobody to play with.
 			--
 			-- This block used to run on EVERY pass of the loop, including the one
@@ -1048,9 +1090,7 @@ function RoundManager.start()
 			-- loop and leave the server permanently stuck with no game running.
 			-- The error still shows up in the output for you to read.
 			local ok, err = pcall(function()
-				if Config.TEST_MODE and Config.TEST_NO_BOMB then
-					runSandbox() -- never returns while TEST_MODE is on
-				elseif runIntermission() then
+				if runIntermission() then
 					runRound()
 				end
 			end)

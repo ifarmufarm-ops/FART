@@ -358,6 +358,15 @@ Remotes.StateChanged.OnClientEvent:Connect(function(payload)
 
 	vignette.Visible = isHolder
 
+	-- The whole round HUD -- countdown, bar, status line, survivor count -- is
+	-- only for people who have asked to play. Somebody wandering round the
+	-- lobby who has not stepped on the pad does not need a timer, and "waiting
+	-- for players" implies the game is waiting on them when it is not.
+	local showRoundHud = state.queued ~= false
+	topPanel.Visible = showRoundHud
+	statusLabel.Visible = showRoundHud
+	aliveLabel.Visible = showRoundHud
+
 	if state.phase == "Playing" then
 		aliveLabel.Text = #state.aliveUserIds .. " left"
 		if isHolder then

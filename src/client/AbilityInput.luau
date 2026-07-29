@@ -98,6 +98,34 @@ local function doDash()
 				Vector3.new(forward.X * Config.DASH_SPEED, velocity.Y, forward.Z * Config.DASH_SPEED)
 			task.wait()
 		end
+
+		-- THE GLIDE. Without this the controller snaps you back to walking pace
+		-- the instant the burst ends, which feels like hitting a wall and makes
+		-- a second dash start from a standstill. Instead the speed is eased down
+		-- to a walk over a fraction of a second, so you slide to a stop as if
+		-- the floor were briefly icy -- and a dash launched during the slide
+		-- carries straight on from the one before.
+		local glideStart = os.clock()
+		local top = Config.DASH_SPEED * Config.DASH_GLIDE_STRENGTH
+		while true do
+			local elapsed = os.clock() - glideStart
+			if elapsed >= Config.DASH_GLIDE_DURATION then
+				break
+			end
+			local _, current = getParts()
+			if not current then
+				return
+			end
+			-- Eased from the glide's top speed down to a normal walk.
+			local remaining = 1 - (elapsed / Config.DASH_GLIDE_DURATION)
+			local speed = Config.BASE_WALK_SPEED + (top - Config.BASE_WALK_SPEED) * remaining
+			if speed <= Config.BASE_WALK_SPEED then
+				break -- already at walking pace; let the controller have it back
+			end
+			local velocity = current.AssemblyLinearVelocity
+			current.AssemblyLinearVelocity = Vector3.new(forward.X * speed, velocity.Y, forward.Z * speed)
+			task.wait()
+		end
 	end)
 end
 

@@ -36,6 +36,10 @@ local lastRequestAt: { [Player]: number } = {}
 local sneakersUntil: { [Player]: number } = {}
 local sneakersToken: { [Player]: number } = {}
 
+-- Who is currently carrying the bomb. Holding it makes you faster, and that has
+-- to combine with Sneakers rather than fight it -- see applyToCharacter.
+local bombHolders: { [Player]: boolean } = {}
+
 -- Set by start(). Answers "is this player actually in the round right now?"
 local isEligible: (Player) -> boolean = function()
 	return false
@@ -87,6 +91,7 @@ function AbilityService.clearAll()
 		slots[player] = nil
 		sneakersUntil[player] = nil
 		sneakersToken[player] = (sneakersToken[player] or 0) + 1 -- cancels pending expiry
+		bombHolders[player] = nil
 		AbilityService.applyToCharacter(player)
 		tellClient(player)
 	end
@@ -109,14 +114,35 @@ end
 --[[
 	Re-applies whatever speed a player should currently have. Called whenever a
 	character spawns, so a boost is not silently lost to a respawn.
+
+	Everything that changes walking speed goes through here rather than setting
+	WalkSpeed itself. That matters: Sneakers and the bomb both change it, and if
+	each set the number directly then whichever finished second would wipe the
+	other -- a holder whose Sneakers ran out would silently lose their bomb speed
+	as well.
 ]]
 function AbilityService.applyToCharacter(player: Player)
+	local speed = Config.BASE_WALK_SPEED
+
 	local until_ = sneakersUntil[player]
 	if until_ and os.clock() < until_ then
-		setWalkSpeed(player, Config.BASE_WALK_SPEED * Config.SNEAKERS_MULTIPLIER)
-	else
-		setWalkSpeed(player, Config.BASE_WALK_SPEED)
+		speed *= Config.SNEAKERS_MULTIPLIER
 	end
+
+	if bombHolders[player] then
+		speed *= Config.BOMB_HOLDER_SPEED
+	end
+
+	setWalkSpeed(player, speed)
+end
+
+--[[
+	Tells the service somebody has picked up or lost the bomb, so their speed
+	can be recalculated. Called by RoundManager on every pass.
+]]
+function AbilityService.setBombHolder(player: Player, holding: boolean)
+	bombHolders[player] = if holding then true else nil
+	AbilityService.applyToCharacter(player)
 end
 
 local function startSneakers(player: Player)
@@ -346,6 +372,7 @@ function AbilityService.start(eligibilityCheck: (Player) -> boolean)
 		lastRequestAt[player] = nil
 		sneakersUntil[player] = nil
 		sneakersToken[player] = nil
+		bombHolders[player] = nil
 	end)
 end
 

@@ -65,6 +65,9 @@ RoundManager.setParticipantProvider(Queue.getQueued)
 -- until enough people queue for another round, which may never happen.
 RoundManager.setReturnToLobby(Lobby.sendToLobby)
 
+-- So the round HUD can be hidden from anybody who has not asked to play.
+RoundManager.setQueueCheck(Queue.isQueued)
+
 -- Where you go when you are blown up, and how you come back.
 RoundManager.setGhostHandlers(GhostArea.send, GhostArea.restore)
 

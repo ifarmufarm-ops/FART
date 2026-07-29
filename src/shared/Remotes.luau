@@ -24,6 +24,10 @@ export type State = {
 	deadline: number?, -- server clock time the timer hits zero
 	duration: number?, -- how long this countdown was to begin with
 	aliveUserIds: { number }, -- everyone still in the round
+	-- Whether the player receiving this is in the queue. The round HUD is
+	-- hidden for anyone who is not, since a countdown means nothing to somebody
+	-- who has not asked to play.
+	queued: boolean?,
 }
 
 local FOLDER_NAME = "Remotes"
