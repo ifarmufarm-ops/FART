@@ -117,6 +117,66 @@ end
 	Builds the glowing ball for one pickup. Exported so the Test Mode showcase
 	range can use exactly the same visuals rather than a lookalike copy.
 ]]
+--=============================================================================
+-- SEEING ICONS THROUGH WALLS
+--=============================================================================
+--[[
+	A switch you can flip while the game is running, to feel the difference
+	rather than argue about it.
+
+	The setting is kept in a BoolValue in ReplicatedStorage rather than in a plain
+	variable, and that is deliberate. Calling require() from Studio's command bar
+	hands back a SEPARATE copy of this module, so a variable set that way would
+	not be the one the running game reads -- existing icons would change and every
+	new pickup would come back wrong. A real Instance is shared by everybody, so
+	the switch works from anywhere.
+]]
+local ICON_NAME = "PickupIcon"
+local FLAG_NAME = "PickupIconsThroughWalls"
+
+local function flag(): BoolValue
+	local existing = ReplicatedStorage:FindFirstChild(FLAG_NAME)
+	if existing and existing:IsA("BoolValue") then
+		return existing
+	end
+	local created = Instance.new("BoolValue")
+	created.Name = FLAG_NAME
+	created.Value = Config.PICKUP_ICONS_THROUGH_WALLS
+	created.Parent = ReplicatedStorage
+	return created
+end
+
+--[[
+	Reads the switch, or sets it.
+
+		Pickups.iconsThroughWalls()       -- what is it now?
+		Pickups.iconsThroughWalls(false)  -- hide them behind walls
+		Pickups.iconsThroughWalls(true)   -- back to showing through
+
+	Setting it updates every icon already on the map, so the change is instant.
+]]
+function Pickups.iconsThroughWalls(on: boolean?): boolean
+	local value = flag()
+	if on == nil then
+		return value.Value
+	end
+
+	value.Value = on
+
+	-- Update what is already out there. Found by walking the world rather than
+	-- from a list, so it covers the arena pickups, the lobby practice range and
+	-- Test Mode's showcase row without any of them having to register.
+	local changed = 0
+	for _, thing in workspace:GetDescendants() do
+		if thing:IsA("BillboardGui") and thing.Name == ICON_NAME then
+			thing.AlwaysOnTop = on
+			changed += 1
+		end
+	end
+	print(("[Pickups] icons through walls: %s (%d already on the map updated)"):format(tostring(on), changed))
+	return on
+end
+
 function Pickups.buildVisual(definition: Abilities.Definition, position: Vector3, parent: Instance?): BasePart
 	local part = Instance.new("Part")
 	part.Name = "Pickup_" .. definition.id
@@ -143,7 +203,10 @@ function Pickups.buildVisual(definition: Abilities.Definition, position: Vector3
 	local billboard = Instance.new("BillboardGui")
 	billboard.Size = UDim2.fromOffset(46, 46)
 	billboard.StudsOffset = Vector3.new(0, 2, 0)
-	billboard.AlwaysOnTop = true
+	billboard.Name = ICON_NAME
+	-- Read fresh every time rather than captured once, so flipping the switch
+	-- affects pickups that spawn after it as well as the ones already out.
+	billboard.AlwaysOnTop = Pickups.iconsThroughWalls()
 	billboard.Parent = part
 
 	local label = Instance.new("TextLabel")

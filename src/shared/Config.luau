@@ -342,6 +342,20 @@ Config.PICKUP_MAX_ACTIVE = 11
 -- How close you must get to collect one, in studs.
 Config.PICKUP_COLLECT_RADIUS = 4
 
+-- CAN YOU SEE PICKUP ICONS THROUGH WALLS?
+--
+-- True is how it has always been: the little emoji floats in front of everything,
+-- so you can see what is available across the whole map. False hides it behind
+-- pillars and crates, so you have to look round things to find them -- which
+-- makes the map matter more and rewards knowing it.
+--
+-- This is the STARTING value. It can be flipped mid-game without restarting:
+--
+--     require(game.ServerScriptService.Server.Pickups).iconsThroughWalls(false)
+--
+-- so you can feel the difference immediately. See BALANCE.md.
+Config.PICKUP_ICONS_THROUGH_WALLS = true
+
 -- How high above the floor a pickup hovers.
 Config.PICKUP_FLOAT_HEIGHT = 3
 

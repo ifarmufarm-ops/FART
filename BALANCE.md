@@ -88,10 +88,28 @@ How much stuff is on the floor.
 | `PICKUP_MIN_ACTIVE` / `PICKUP_MAX_ACTIVE` | 3 / 8 | Held between these two, so 4 players get 3 and 10 players get 8 |
 | `PICKUP_LIFETIME` | 30s | An untouched one disappears after this, so corners do not silt up |
 | `PICKUP_COLLECT_RADIUS` | 4 studs | How close you must get to take one |
+| `PICKUP_ICONS_THROUGH_WALLS` | `true` | Whether the little emoji shows in front of walls. `false` hides it behind pillars and crates, so you have to look round things — see below |
 | `ABILITY_USES` | 3 | Uses in a single pickup. You carry one ability at a time; a new one **replaces** it rather than stacking. An individual ability can override this with a `uses` field in `Abilities.luau` — Sneakers does |
 
 Which pickups exist and how often each appears is in `src/shared/Abilities.luau`,
 not Config — that is where you add a new one or change the odds.
+
+### Trying the icon change without restarting
+
+`PICKUP_ICONS_THROUGH_WALLS` is the value the game **starts** with, but you can
+flip it mid-game to feel the difference straight away. In Studio, with the game
+running, open **View → Command Bar** and paste:
+
+```bash
+require(game.ServerScriptService.Server.Pickups).iconsThroughWalls(false)
+```
+
+Every icon already on the map changes at once, and so does everything that spawns
+afterwards. `true` puts it back. Leave off the `false` and it just tells you what
+the setting currently is.
+
+Whichever you prefer, set `PICKUP_ICONS_THROUGH_WALLS` in Config to match so it
+sticks.
 
 ## Abilities
 
