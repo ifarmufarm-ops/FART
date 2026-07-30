@@ -55,6 +55,7 @@ local Queue = require(script.Queue)
 local Ragdoll = require(script.Ragdoll)
 local RoundManager = require(script.RoundManager)
 local Scoreboard = require(script.Scoreboard)
+local Shop = require(script.Shop)
 local StatsService = require(script.StatsService)
 
 Ragdoll.setupCollisionGroups()
@@ -152,6 +153,10 @@ PracticeRange.start()
 -- only builds its own placeholder slabs if nothing is tagged yet -- so tagging
 -- your own signs replaces them with no code change. Must come after Lobby.build().
 Scoreboard.start()
+
+-- The fart-colour pedestals. Walk onto one to buy it, or to wear one you already
+-- own. Refuses politely while the products do not exist yet -- see STORE.md.
+Shop.start()
 
 -- Beacon events reach the round and nothing else. Tiny Mode and Reverse
 -- Controls are scoped by this; Ice Shoes was already safe, because it freezes

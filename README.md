@@ -165,6 +165,7 @@ You would also need to name the model `Arena`, add SpawnLocations, and update
 | File | What it does |
 |---|---|
 | `BALANCE.md` | **The dials that change how the game plays.** Start here to tune |
+| `STORE.md` | Everything about selling things, and how to switch it on |
 | `src/shared/Config.luau` | Every number, with the full reasoning beside each one |
 | `src/shared/Abilities.luau` | The catalogue of every pickup and how often it spawns |
 | `src/shared/Remotes.luau` | The channels the server uses to update screens |
@@ -180,6 +181,8 @@ You would also need to name the model `Arena`, add SpawnLocations, and update
 | `src/server/Queue.luau` | The queue pad, and who has asked to play |
 | `src/server/PracticeRange.luau` | The lobby's abilities-only practice row |
 | `src/server/Scoreboard.luau` | The boards on the lobby wall |
+| `src/server/Shop.luau` | The fart-colour pedestals. See `STORE.md` |
+| `src/server/Purchases.luau` | Receipts, and what people own |
 | `src/server/StatsService.luau` | Counting what players do |
 | `src/server/StatsStore.luau` | Saving it. The only file that touches saved data |
 | `src/server/GhostArea.luau` | The glass platform you watch from once you are out |

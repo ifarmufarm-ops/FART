@@ -215,7 +215,10 @@ Config.SPAWN_CLEARANCE = 0.15
 -- studs/s, so this is many times further than anyone can be thrown.
 Config.LOBBY_CENTER = Vector3.new(0, 2, 600)
 
-Config.LOBBY_SIZE = 110 -- width and depth of the lobby floor, in studs
+-- Doubled from 110 after playtesting: at the old size the queue pad, the
+-- practice range and the boards were all close enough that their floating
+-- labels overlapped on screen from most angles.
+Config.LOBBY_SIZE = 220 -- width and depth of the lobby floor, in studs
 Config.LOBBY_WALL_HEIGHT = 22 -- perimeter walls, so nobody wanders into the void
 Config.LOBBY_SPAWN_COUNT = 8 -- pads in the ring players appear on
 
@@ -691,6 +694,17 @@ Config.STATS_SHUTDOWN_WAIT = 25
 -- and anything purchasable that affected those would turn them into a measure of
 -- spending rather than skill.
 Config.PRODUCTS_ENABLED = false
+
+-- THE SHOP. A row of pedestals along one lobby wall, one per colour. Walk onto
+-- one to buy it, or to wear it if you already own it. See STORE.md.
+Config.SHOP_SPACING = 14 -- gap between pedestals, in studs
+Config.SHOP_PAD_RADIUS = 5 -- how close you must get, in studs
+Config.SHOP_CHECK_INTERVAL = 0.2 -- how often the pedestals look for players
+
+-- Least time between two purchase prompts for the same player, in seconds.
+-- Roblox's own window takes a moment to appear, and without this walking across
+-- two pedestals would stack prompts on top of each other.
+Config.SHOP_PROMPT_COOLDOWN = 2
 
 --=============================================================================
 -- THE BOARDS IN THE LOBBY
