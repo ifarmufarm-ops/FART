@@ -34,6 +34,7 @@
 ]]
 
 local DataStoreService = game:GetService("DataStoreService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -228,6 +229,11 @@ end
 
 StatsStore.applyDelta = applyDelta
 
+-- Declared here and filled in further down, because flush() below needs to call
+-- it and Lua only sees locals declared ABOVE the code that uses them. Without
+-- this the call resolves to nothing and throws the moment a save succeeds.
+local writeBoards: (userId: number, profile: Profile, changed: { [string]: number }) -> ()
+
 --[[
 	Writes a player's changes.
 
@@ -254,8 +260,13 @@ function StatsStore.flush(userId: number, delta: { [string]: number }): boolean
 	local currentStore = store :: DataStore
 	local at = os.time()
 
+	-- UpdateAsync hands back what it stored, which is the authoritative merged
+	-- profile -- including any other server's changes. The boards are written
+	-- from THAT rather than from this server's idea of the totals, so two
+	-- servers cannot each publish a different number.
+	local merged: Profile? = nil
 	local ok, err = pcall(function()
-		currentStore:UpdateAsync(keyFor(userId), function(stored)
+		merged = currentStore:UpdateAsync(keyFor(userId), function(stored)
 			return applyDelta(stored, delta, at)
 		end)
 	end)
@@ -265,8 +276,150 @@ function StatsStore.flush(userId: number, delta: { [string]: number }): boolean
 		return false
 	end
 
+	if merged then
+		writeBoards(userId, merged :: Profile, delta)
+	end
+
 	log(("%d saved"):format(userId))
 	return true
+end
+
+--=============================================================================
+-- THE RANKED BOARDS
+--=============================================================================
+--[[
+	A player's profile is the truth. These are a second, sorted copy of a single
+	number, which is the only way Roblox can hand back "the top ten".
+
+	One board per statistic per period. The period is baked into the NAME, so
+	"today's punches" is a different board from "yesterday's punches" and
+	yesterday's simply stops being read -- which is what makes a daily board reset
+	with nothing to clean up.
+
+	Written with SetAsync rather than an increment, deliberately: the profile is
+	authoritative, so writing the whole current total is idempotent and a write
+	that goes missing is silently corrected by the next one.
+]]
+
+local boardStores: { [string]: OrderedDataStore } = {}
+
+local function boardFor(statId: string, period: Stats.Period): OrderedDataStore?
+	if not StatsStore.available then
+		return nil
+	end
+
+	local name = ("HPBoard_v1_%s_%s"):format(statId, Stats.bucketFor(period))
+	if RunService:IsStudio() then
+		name = name .. "_studio"
+	end
+
+	local existing = boardStores[name]
+	if existing then
+		return existing
+	end
+
+	local ok, result = pcall(function()
+		return DataStoreService:GetOrderedDataStore(name)
+	end)
+	if not ok or not result then
+		return nil
+	end
+	boardStores[name] = result
+	return result
+end
+
+--[[
+	Puts a player's current totals onto the boards.
+
+	Only for statistics that actually moved -- the whole point of taking the
+	delta is knowing which ones those are, so a player who only ever punches
+	things does not rewrite four untouched boards every minute.
+]]
+function writeBoards(userId: number, profile: Profile, changed: { [string]: number })
+	for _, definition in Stats.list do
+		local moved = changed[definition.id]
+		if not moved or moved == 0 then
+			continue
+		end
+
+		for _, period in definition.periods do
+			local board = boardFor(definition.id, period)
+			if not board then
+				continue
+			end
+
+			local value: number
+			if period == "AllTime" then
+				value = profile.totals[definition.id] or 0
+			else
+				local slot = profile.periods[period]
+				value = if slot then (slot.values[definition.id] or 0) else 0
+			end
+
+			-- Ordered stores hold whole numbers only. Survive time is the only
+			-- fractional one and a second either way means nothing on a board.
+			pcall(function()
+				board:SetAsync(tostring(userId), math.floor(value))
+			end)
+		end
+	end
+end
+
+-- Display names are looked up once and kept. The lookup is a web request, and a
+-- board of ten rows refreshed every minute would otherwise make ten of them.
+local nameCache: { [number]: string } = {}
+
+local function nameFor(userId: number): string
+	local cached = nameCache[userId]
+	if cached then
+		return cached
+	end
+	local ok, result = pcall(function()
+		return Players:GetNameFromUserIdAsync(userId)
+	end)
+	local name = if ok and result then result else ("Player " .. tostring(userId))
+	nameCache[userId] = name
+	return name
+end
+
+export type Row = { userId: number, name: string, value: number }
+
+--[[
+	The top players on one board, best first.
+
+	Returns nil -- rather than an empty list -- when the board could not be read
+	at all, so a caller can tell "nobody has scored yet" apart from "we do not
+	know".
+]]
+function StatsStore.getBoard(statId: string, period: Stats.Period, count: number): { Row }?
+	local board = boardFor(statId, period)
+	if not board then
+		return nil
+	end
+
+	local ok, pages = pcall(function()
+		return board:GetSortedAsync(false, count)
+	end)
+	if not ok or not pages then
+		log(("could not read the %s / %s board"):format(statId, period))
+		return nil
+	end
+
+	local rows: { Row } = {}
+	local okPage, page = pcall(function()
+		return pages:GetCurrentPage()
+	end)
+	if not okPage or not page then
+		return nil
+	end
+
+	for _, entry in page do
+		local userId = tonumber(entry.key)
+		if userId then
+			table.insert(rows, { userId = userId, name = nameFor(userId), value = entry.value })
+		end
+	end
+	return rows
 end
 
 --[[

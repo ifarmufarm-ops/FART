@@ -32,6 +32,7 @@ local PracticeRange = require(script.PracticeRange)
 local Queue = require(script.Queue)
 local Ragdoll = require(script.Ragdoll)
 local RoundManager = require(script.RoundManager)
+local Scoreboard = require(script.Scoreboard)
 local StatsService = require(script.StatsService)
 
 Ragdoll.setupCollisionGroups()
@@ -119,6 +120,11 @@ end)
 -- check above is what makes it actually work -- without it every ability used
 -- here would be silently thrown away.
 PracticeRange.start()
+
+-- The boards on the lobby wall. Finds anything tagged Config.TAG_SCOREBOARD and
+-- only builds its own placeholder slabs if nothing is tagged yet -- so tagging
+-- your own signs replaces them with no code change. Must come after Lobby.build().
+Scoreboard.start()
 
 -- Beacon events reach the round and nothing else. Tiny Mode and Reverse
 -- Controls are scoped by this; Ice Shoes was already safe, because it freezes

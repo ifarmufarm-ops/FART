@@ -671,6 +671,46 @@ Config.STATS_RETRY_BASE = 1
 Config.STATS_SHUTDOWN_WAIT = 25
 
 --=============================================================================
+-- THE BOARDS IN THE LOBBY
+--=============================================================================
+-- Each board is a flat part with the text drawn onto one of its faces. The code
+-- does NOT build them at fixed positions and hope -- it goes looking for any
+-- part wearing the tag below, which is the same trick that makes the arena floor
+-- and the pickup zones swappable.
+--
+-- TO REPLACE THESE WITH YOUR OWN SIGNS:
+--   1. Build a sign however you like -- a flat part, or a model with a flat front
+--   2. Select it, open View -> Tag Editor, and add the tag named below
+--   3. Add an Attribute called StatId, set to one of: SurviveSeconds, Passes,
+--      AbilityUses, Punches, RobuxSpent
+--   4. Optionally add an Attribute called Period: AllTime, Daily, Weekly or
+--      Monthly. Left out, RobuxSpent cycles through all four and everything else
+--      shows all-time
+--   5. Optionally add an Attribute called Face if the text should be on a
+--      different side: Front, Back, Left, Right, Top or Bottom
+--
+-- As soon as ANYTHING carries that tag, the code stops generating its own
+-- placeholder slabs and uses yours instead. Nothing to delete twice.
+Config.TAG_SCOREBOARD = "HotPotatoScoreboard"
+
+Config.SCOREBOARD_ENABLED = true
+Config.SCOREBOARD_ROWS = 10 -- how many names each board lists
+
+-- How often one board is refreshed. Boards take turns rather than all
+-- refreshing together: reading a sorted board is a rationed request, and eight
+-- of them in the same instant can exceed what Roblox allows in one go.
+Config.SCOREBOARD_REFRESH_SECONDS = 20
+
+-- How long the Robux board shows each of its four periods before moving on.
+-- Cycling comes out of memory, so it costs nothing.
+Config.SCOREBOARD_CYCLE_SECONDS = 12
+
+-- The placeholder slabs, if you have not tagged your own. Sizes in studs.
+Config.SCOREBOARD_WIDTH = 16
+Config.SCOREBOARD_HEIGHT = 13
+Config.SCOREBOARD_SPACING = 19
+
+--=============================================================================
 -- SOUNDS
 --=============================================================================
 -- These "rbxasset://" paths are built into every Roblox client, so they always
