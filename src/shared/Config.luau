@@ -215,10 +215,10 @@ Config.SPAWN_CLEARANCE = 0.15
 -- studs/s, so this is many times further than anyone can be thrown.
 Config.LOBBY_CENTER = Vector3.new(0, 2, 600)
 
--- Doubled from 110 after playtesting: at the old size the queue pad, the
--- practice range and the boards were all close enough that their floating
--- labels overlapped on screen from most angles.
-Config.LOBBY_SIZE = 220 -- width and depth of the lobby floor, in studs
+-- Went 110 -> 220 -> 148. At 110 the queue pad, the practice range and the
+-- boards were close enough that their floating labels overlapped on screen from
+-- most angles. 220 fixed that and was too far to walk. 148 is the middle.
+Config.LOBBY_SIZE = 148 -- width and depth of the lobby floor, in studs
 Config.LOBBY_WALL_HEIGHT = 22 -- perimeter walls, so nobody wanders into the void
 Config.LOBBY_SPAWN_COUNT = 8 -- pads in the ring players appear on
 
