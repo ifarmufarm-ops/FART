@@ -120,6 +120,34 @@ They stack — several can run at once (`Config.MODIFIERS_STACK`).
 | Reverse Controls | Movement inverted for everyone **except** whoever grabbed it, 5s |
 | Brain Rot Alert | An NPC hunts everyone **except** the bomb holder, knocking them down |
 
+## The boards in the lobby
+
+Five boards on a lobby wall: survive time, bombs passed, abilities used, punches
+on the ghost-area bag, and Robux spent. The Robux one cycles through today, this
+week, this month and all time; the rest are all-time only.
+
+They are found **by tag**, never by name or position, so you can replace them
+with your own signs without any code change:
+
+1. Build a sign -- a flat part, or a model with a flat front
+2. Select it, open **View → Tag Editor**, add `HotPotatoScoreboard`
+3. Add an Attribute `StatId`, set to one of `SurviveSeconds`, `Passes`,
+   `AbilityUses`, `Punches`, `RobuxSpent`
+4. Optionally `Period` (`AllTime`, `Daily`, `Weekly`, `Monthly`) and `Face`
+   (which side the text goes on)
+
+The moment anything carries that tag, the code stops building its own grey
+placeholder slabs and uses yours instead.
+
+**Saving needs API access.** In Studio: **Game Settings → Security → Enable
+Studio Access to API Services**. Studio always writes to a separate save file
+with `_studio` on the end, so playtesting can never touch real player data.
+Without it the game runs normally, remembers nothing, and says so once.
+
+Robux spend can only ever count purchases made through this game, from the day
+monetisation exists -- Roblox gives developers no purchase history, so that board
+stays empty until then and can never include anything bought before.
+
 ## Building your own map
 
 The code finds map features by **tag**, never by name, so a hand-built map is a
@@ -137,6 +165,7 @@ You would also need to name the model `Arena`, add SpawnLocations, and update
 | File | What it does |
 |---|---|
 | `BALANCE.md` | **The dials that change how the game plays.** Start here to tune |
+| `STORE.md` | Everything about selling things, and how to switch it on |
 | `src/shared/Config.luau` | Every number, with the full reasoning beside each one |
 | `src/shared/Abilities.luau` | The catalogue of every pickup and how often it spawns |
 | `src/shared/Remotes.luau` | The channels the server uses to update screens |
@@ -151,6 +180,11 @@ You would also need to name the model `Arena`, add SpawnLocations, and update
 | `src/server/Lobby.luau` | The lobby: where you are when you are not in a round |
 | `src/server/Queue.luau` | The queue pad, and who has asked to play |
 | `src/server/PracticeRange.luau` | The lobby's abilities-only practice row |
+| `src/server/Scoreboard.luau` | The boards on the lobby wall |
+| `src/server/Shop.luau` | The fart-colour pedestals. See `STORE.md` |
+| `src/server/Purchases.luau` | Receipts, and what people own |
+| `src/server/StatsService.luau` | Counting what players do |
+| `src/server/StatsStore.luau` | Saving it. The only file that touches saved data |
 | `src/server/GhostArea.luau` | The glass platform you watch from once you are out |
 | `src/server/GhostClicker.luau` | The punching bag up there |
 | `src/server/TestRange.luau` | The Test Mode showcase row |

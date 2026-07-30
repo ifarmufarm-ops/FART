@@ -16,8 +16,30 @@
 		Shared/Abilities  the catalogue of what can spawn as a pickup
 ]]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+--[[
+	THE VERY FIRST THING, before a single part is built.
+
+	This game hands out every body itself. Until this line runs, Roblox is still
+	spawning players on its own -- and a player who joins in that window has a
+	problem: the arena's spawn pads exist but are deliberately disabled, and the
+	lobby's have not been built yet. With no enabled spawn point anywhere, Roblox
+	drops the character at the world origin, which is the middle of the arena.
+
+	They then have a body, so the lobby's respawner -- which only rescues players
+	who have none -- leaves them alone; and they are not queued, so no round ever
+	claims them. The result is a player stranded in the arena, unable to play,
+	unable to leave, and unable to be passed the bomb. Seen with three clients
+	joining at once, where it hit exactly one of them.
+
+	Setting this before anything else closes the window. RoundManager sets it
+	again for its own reasons; setting it twice costs nothing.
+]]
+Players.CharacterAutoLoads = false
 
 local AbilityService = require(script.AbilityService)
 local Arena = require(script.Arena)
@@ -26,10 +48,15 @@ local GhostArea = require(script.GhostArea)
 local GhostClicker = require(script.GhostClicker)
 local Lobby = require(script.Lobby)
 local Modifiers = require(script.Modifiers)
+local MovementGuard = require(script.MovementGuard)
 local PracticeRange = require(script.PracticeRange)
+local Purchases = require(script.Purchases)
 local Queue = require(script.Queue)
 local Ragdoll = require(script.Ragdoll)
 local RoundManager = require(script.RoundManager)
+local Scoreboard = require(script.Scoreboard)
+local Shop = require(script.Shop)
+local StatsService = require(script.StatsService)
 
 Ragdoll.setupCollisionGroups()
 Arena.build()
@@ -88,10 +115,48 @@ GhostClicker.setPunchCheck(GhostArea.isGhost)
 
 Queue.start()
 
+-- Counting, the survive clock, and the numbers in Roblox's player list.
+StatsService.start()
+
+-- The receipt handler. Connected even though nothing can be bought yet, because
+-- an unhandled receipt is money taken with nothing given -- Roblox keeps
+-- retrying it, and something has to be there to refuse it properly.
+Purchases.start()
+
+-- Watches for characters covering ground faster than the game allows, which is
+-- the only rule a modified client can actually break -- Roblox gives each player
+-- control of their own character's physics, and that cannot be turned off
+-- without making the dash feel laggy for everybody.
+--
+-- Only acted on inside a live round. There is nothing to gain by cheating in the
+-- lobby, and yanking somebody backwards there would be pure annoyance.
+MovementGuard.setEnforceCheck(RoundManager.isAlive)
+MovementGuard.start()
+
+-- Which ability uses land on the leaderboard. Being ALLOWED to use one and
+-- having it COUNT are deliberately different questions: the lobby practice range
+-- hands them out endlessly, so counting those would make "Ability king" a
+-- measure of who stood in the lobby longest.
+AbilityService.setCountCheck(function(player: Player): boolean
+	if Config.COUNT_PRACTICE_ABILITIES then
+		return true
+	end
+	return RoundManager.isAlive(player)
+end)
+
 -- The lobby's practice range: abilities only, always available. The eligibility
 -- check above is what makes it actually work -- without it every ability used
 -- here would be silently thrown away.
 PracticeRange.start()
+
+-- The boards on the lobby wall. Finds anything tagged Config.TAG_SCOREBOARD and
+-- only builds its own placeholder slabs if nothing is tagged yet -- so tagging
+-- your own signs replaces them with no code change. Must come after Lobby.build().
+Scoreboard.start()
+
+-- The fart-colour pedestals. Walk onto one to buy it, or to wear one you already
+-- own. Refuses politely while the products do not exist yet -- see STORE.md.
+Shop.start()
 
 -- Beacon events reach the round and nothing else. Tiny Mode and Reverse
 -- Controls are scoped by this; Ice Shoes was already safe, because it freezes
@@ -140,6 +205,20 @@ Lobby.startRespawner(function(player)
 		return true
 	end
 	return RoundManager.isInRound(player)
+end, function(player: Player): boolean
+	-- Who is allowed to be standing in the arena. Anyone in a round, anyone in
+	-- the free-for-all between rounds, and any ghost -- they are above it rather
+	-- than in it, but they are not stranded either. Everybody else found down
+	-- there is put back in the lobby.
+	if GhostArea.isGhost(player) then
+		return true
+	end
+	for _, allowed in RoundManager.getArenaPlayers() do
+		if allowed == player then
+			return true
+		end
+	end
+	return false
 end)
 
 -- "Back to the lobby", pressed by a player who has been blown up.
@@ -160,6 +239,21 @@ Remotes.LeaveRound.OnServerEvent:Connect(function(player)
 		GhostArea.restore(player)
 		Lobby.sendToLobby(player)
 	end
+end)
+
+--[[
+	On the way down, save everybody's progress -- and WAIT for it.
+
+	The order matters. Closing the survive clocks first banks the round that is
+	still running; saving first would write everything except that. And this is
+	waited on rather than fired off, because a shutdown that does not wait loses
+	up to a full save interval plus the whole current round, which players
+	experience as their numbers going backwards. That is the most
+	trust-destroying thing a leaderboard can do.
+]]
+game:BindToClose(function()
+	StatsService.endRoundAll()
+	StatsService.flushAll()
 end)
 
 RoundManager.start()

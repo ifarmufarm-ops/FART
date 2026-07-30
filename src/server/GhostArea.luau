@@ -18,6 +18,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 
+local MovementGuard = require(script.Parent.MovementGuard)
+
 local GhostArea = {}
 
 local CENTER = Config.ARENA_CENTER + Vector3.new(0, Config.GHOST_HEIGHT, 0)
@@ -176,6 +178,9 @@ function GhostArea.send(player: Player): boolean
 	end)
 	character.PrimaryPart.AssemblyLinearVelocity = Vector3.zero
 	setGhostLook(character, Config.GHOST_TRANSPARENCY)
+
+	-- Straight up 130 studs, by the server's hand. Not a speed cheat.
+	MovementGuard.forgive(player)
 	return true
 end
 

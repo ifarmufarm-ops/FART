@@ -24,8 +24,10 @@ local Arena = require(script.Parent.Arena)
 local BrainRot = require(script.Parent.BrainRot)
 local Bomb = require(script.Parent.Bomb)
 local Modifiers = require(script.Parent.Modifiers)
+local MovementGuard = require(script.Parent.MovementGuard)
 local Pickups = require(script.Parent.Pickups)
 local Ragdoll = require(script.Parent.Ragdoll)
+local StatsService = require(script.Parent.StatsService)
 local TestRange = require(script.Parent.TestRange)
 
 local RoundManager = {}
@@ -491,6 +493,11 @@ local function eliminate(player: Player)
 		table.remove(alive, index)
 	end
 
+	-- Bank their survive time before anything else. Doing it up here rather than
+	-- at the end means an error in the ragdoll or the explosion cannot swallow
+	-- the accounting.
+	StatsService.endRound(player)
+
 	local character = player.Character
 	local blastPosition = Bomb.getPosition()
 
@@ -571,6 +578,12 @@ local function pruneAlive()
 		end
 
 		table.remove(alive, i)
+
+		-- The involuntary way out -- pressed Reset, fell out of the world,
+		-- disconnected. This path never calls eliminate(), so without banking
+		-- the clock here their survive time would be thrown away.
+		StatsService.endRound(player)
+
 		if holder == player then
 			Bomb.detach()
 			holder = nil
@@ -615,6 +628,8 @@ local function spawnEveryone(list: { Player })
 				-- arrived a moment after the character was parented.
 				Ragdoll.setCollisionGroup(character, Ragdoll.LIVE_GROUP)
 			end
+			-- The lobby-to-arena jump is the server's doing, not the player's.
+			MovementGuard.forgive(player)
 			pending -= 1
 		end)
 	end
@@ -634,6 +649,9 @@ local function runIntermission()
 	phase = "Intermission"
 	holder = nil
 	alive = {}
+	-- Belt and braces. If a round ended down a path that skipped the round-end
+	-- code, this catches any clock still running before the next one starts.
+	StatsService.endRoundAll()
 	-- The countdown belongs to whoever is queued: they are the ones about to be
 	-- pulled in, and it is their window to change their mind. Anybody else in
 	-- the lobby should not see a countdown for a round they are not in.
@@ -772,6 +790,12 @@ local function runRound()
 	announce(first.DisplayName .. " has the bomb!", COLOR_ELIMINATED, 2.5)
 	broadcast()
 
+	-- Survive clocks start HERE and not where `alive` was filled in. Between the
+	-- two there are early returns -- not enough players, nobody able to take the
+	-- bomb -- that abandon the round without ever reaching the round-end code. A
+	-- clock started before them would run for the rest of the server's life.
+	StatsService.beginRound(alive)
+
 	-- The beeping runs on its own clock so it can speed up smoothly without
 	-- interfering with the main rule checks below.
 	task.spawn(function()
@@ -821,7 +845,24 @@ local function runRound()
 				-- trade physically cannot continue. That is what ends a duel.
 				local floor = if #alive <= 2 then Config.TIMER_MINIMUM_DUEL else Config.TIMER_MINIMUM
 				cycleDuration = math.max(floor, cycleDuration - Config.TIMER_DECAY_PER_PASS)
+
+				-- Who gets the credit, captured BEFORE the hand-over. giveBombTo
+				-- reassigns `holder`, so reading it afterwards would credit every
+				-- pass to the player who RECEIVED the bomb. That mistake looks
+				-- entirely plausible from the outside -- the numbers still go up
+				-- -- and cannot be spotted playing alone, because there is
+				-- nobody to pass to.
+				local passer = holder
+
 				if giveBombTo(target) then
+					-- Only on success. giveBombTo returns false when the bomb
+					-- fails to attach, and a failed hand-over is not a pass.
+					--
+					-- This is the ONLY genuine player-to-player pass. The other
+					-- three calls to giveBombTo are the opening hand-out, the
+					-- replacement when a holder vanishes, and the hand-out after
+					-- an explosion -- none of which anybody passed.
+					StatsService.add(passer, "Passes", 1)
 					continue
 				end
 			end
@@ -858,6 +899,20 @@ local function runRound()
 	-- lying around, rather than standing in a map that froze the instant they
 	-- won. Everything is tidied up shortly before the next round instead.
 	phase = "RoundOver"
+
+	-- Everybody still standing stops the clock here -- the winner, and anyone
+	-- the loop broke out early for. Every exit from the round above falls
+	-- through to this line.
+	StatsService.endRoundAll()
+
+	-- A natural checkpoint: a whole round's worth of survive time has just been
+	-- banked, so get it written rather than waiting for the routine save.
+	for _, member in roundMembers do
+		if member.Parent == Players then
+			task.spawn(StatsService.flush, member)
+		end
+	end
+
 	Bomb.detach()
 	holder = nil
 	duration = 0
@@ -917,6 +972,8 @@ local function runRound()
 					if character.PrimaryPart then
 						character.PrimaryPart.AssemblyLinearVelocity = Vector3.zero
 					end
+					-- Brought down 130 studs by the server.
+					MovementGuard.forgive(member)
 				end
 				continue
 			end

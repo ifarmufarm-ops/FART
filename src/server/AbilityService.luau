@@ -24,7 +24,12 @@ local Abilities = require(ReplicatedStorage.Shared.Abilities)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local Products = require(ReplicatedStorage.Shared.Products)
+
+local MovementGuard = require(script.Parent.MovementGuard)
+local Purchases = require(script.Parent.Purchases)
 local Ragdoll = require(script.Parent.Ragdoll)
+local StatsService = require(script.Parent.StatsService)
 
 local AbilityService = {}
 
@@ -43,6 +48,21 @@ local bombHolders: { [Player]: boolean } = {}
 -- Set by start(). Answers "is this player actually in the round right now?"
 local isEligible: (Player) -> boolean = function()
 	return false
+end
+
+--[[
+	Answers "does this use belong on the leaderboard?", which is a different
+	question from "is this use allowed".
+
+	Wired from init.server.luau rather than required, because RoundManager
+	already requires this file and the two cannot require each other.
+]]
+local shouldCount: (Player) -> boolean = function()
+	return true
+end
+
+function AbilityService.setCountCheck(check: (Player) -> boolean)
+	shouldCount = check
 end
 
 --=============================================================================
@@ -200,7 +220,15 @@ local function dashSmoke(root: BasePart)
 	local smoke = Instance.new("ParticleEmitter")
 	smoke.Name = "DashTrace"
 	smoke.Texture = Config.PARTICLE_SMOKE
-	smoke.Color = ColorSequence.new(Color3.fromRGB(206, 232, 128), Color3.fromRGB(118, 146, 68))
+
+	-- Same purchased colour as the fart puff. One cosmetic covers everything you
+	-- leave behind, so a colour somebody paid for is not half applied.
+	local dashOwner = Players:GetPlayerFromCharacter(root.Parent)
+	local dashFrom, dashTo = Products.DASH_DEFAULT_FROM, Products.DASH_DEFAULT_TO
+	if dashOwner then
+		dashFrom, dashTo = Purchases.getDashColors(dashOwner)
+	end
+	smoke.Color = ColorSequence.new(dashFrom, dashTo)
 	smoke.Size = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.7),
 		NumberSequenceKeypoint.new(1, 5.2),
@@ -266,7 +294,15 @@ local function fartPuff(root: BasePart)
 	local puff = Instance.new("ParticleEmitter")
 	puff.Name = "FartSmoke"
 	puff.Texture = Config.PARTICLE_SMOKE
-	puff.Color = ColorSequence.new(Color3.fromRGB(198, 226, 106), Color3.fromRGB(112, 138, 62))
+
+	-- The one thing a purchase changes. Anybody who has bought nothing gets the
+	-- colours this has always used, so nothing looks different until it should.
+	local owner = Players:GetPlayerFromCharacter(root.Parent)
+	local from, to = Products.FART_DEFAULT_FROM, Products.FART_DEFAULT_TO
+	if owner then
+		from, to = Purchases.getFartColors(owner)
+	end
+	puff.Color = ColorSequence.new(from, to)
 	puff.Size = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.6),
 		NumberSequenceKeypoint.new(1, 4.6),
@@ -365,6 +401,36 @@ local function onRequest(player: Player, requestKind: any)
 		slots[player] = nil
 	end
 	tellClient(player)
+
+	-- Counted here because this is the approval point: every branch above is a
+	-- rejection, and this runs before the effects, which could in principle
+	-- error. One use spent, one use counted.
+	--
+	-- Gated, because the lobby practice range hands abilities out every couple of
+	-- seconds forever -- counting those would let anybody top the board without
+	-- ever entering a round. See Config.COUNT_PRACTICE_ABILITIES.
+	if shouldCount(player) then
+		StatsService.add(player, "AbilityUses", 1)
+	end
+
+	-- Tell the movement guard this player is about to move fast on purpose, or
+	-- every legitimate dash reads as a speed cheat.
+	--
+	-- A dash's momentum outlives the dash itself, and by a lot. Jump straight
+	-- after one and there is no friction to slow you, so you keep the full dash
+	-- speed until you land -- longer still under Low Gravity -- and landing on
+	-- Ice Shoes keeps most of it again while you slide.
+	--
+	-- So this grants FULL dash speed for a good while rather than the slower
+	-- slide speed for a moment. See Config.MOVEMENT_MOMENTUM_SECONDS for why
+	-- that trade is the right way round.
+	if abilityId == "Dash" then
+		MovementGuard.allow(
+			player,
+			Config.DASH_SPEED * Config.MOVEMENT_GRANT_HEADROOM,
+			Config.MOVEMENT_MOMENTUM_SECONDS
+		)
+	end
 
 	if abilityId == "Sneakers" then
 		startSneakers(player)

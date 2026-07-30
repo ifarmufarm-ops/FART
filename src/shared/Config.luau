@@ -215,9 +215,21 @@ Config.SPAWN_CLEARANCE = 0.15
 -- studs/s, so this is many times further than anyone can be thrown.
 Config.LOBBY_CENTER = Vector3.new(0, 2, 600)
 
-Config.LOBBY_SIZE = 110 -- width and depth of the lobby floor, in studs
+-- Went 110 -> 220 -> 148. At 110 the queue pad, the practice range and the
+-- boards were close enough that their floating labels overlapped on screen from
+-- most angles. 220 fixed that and was too far to walk. 148 is the middle.
+Config.LOBBY_SIZE = 148 -- width and depth of the lobby floor, in studs
 Config.LOBBY_WALL_HEIGHT = 22 -- perimeter walls, so nobody wanders into the void
 Config.LOBBY_SPAWN_COUNT = 8 -- pads in the ring players appear on
+
+-- How far IN from the lobby wall the ring of spawn pads sits, in studs.
+--
+-- This has to clear the practice range, which stands against one wall. At an
+-- earlier value of 18 a spawn pad ended up 2 studs from the Fart Jump pedestal
+-- -- inside its 4 stud collect radius -- so anybody who happened to spawn there
+-- was handed a free ability the instant they appeared, and the pedestal spent
+-- most of its life empty.
+Config.LOBBY_SPAWN_INSET = 30
 
 -- How often the lobby looks for somebody who has lost their body and puts them
 -- back on their feet. The game hands out every body itself (see
@@ -526,6 +538,213 @@ Config.BRAINROT_REPATH_INTERVAL = 0.8
 -- This one is Roblox's built-in smiley, which ships with every client, so the
 -- NPC has a face today without you having to upload anything.
 Config.BRAINROT_FACE = "rbxasset://textures/face.png"
+
+--=============================================================================
+-- MOVEMENT GUARD  (the one thing a cheat can actually do)
+--=============================================================================
+-- Every rule in this game is decided on the server and cannot be lied to --
+-- who has the bomb, whether a pass happened, whether an ability may be used.
+-- Movement is the single exception: Roblox gives each player's own machine
+-- control of their character, which is what makes the dash feel instant, and
+-- the price is that a modified client can move itself however it likes.
+--
+-- So the server watches where people actually are and flags anybody covering
+-- ground faster than the game allows.
+
+Config.MOVEMENT_GUARD_ENABLED = true
+
+-- SNAPPING BACK IS OFF TO BEGIN WITH, deliberately.
+--
+-- With this false the guard only watches and writes to the output. Play a few
+-- real rounds like that first and see whether anything honest trips it -- a
+-- laggy player being yanked backwards is a far worse bug than a cheater getting
+-- away with it for another week. Turn it on once the log stays quiet.
+Config.MOVEMENT_CORRECT = false
+Config.MOVEMENT_LOG = true
+
+-- How often each player's position is checked. Every quarter second is plenty:
+-- a cheater has to keep it up to gain anything, and checking more often mostly
+-- measures network jitter.
+Config.MOVEMENT_CHECK_INTERVAL = 0.25
+
+-- How much faster than legal is still forgiven, and a flat allowance on top.
+-- Both exist for honest reasons -- running downhill, being shoved by another
+-- player, and lag arriving late then catching up all at once.
+Config.MOVEMENT_TOLERANCE = 1.6
+Config.MOVEMENT_MARGIN = 10
+
+-- Ground covered in one check that is a teleport rather than running. A dash at
+-- 85 studs/s covers about 21 in a quarter second, and an explosion launch about
+-- the same, so this is comfortably clear of anything legitimate.
+Config.MOVEMENT_TELEPORT_STUDS = 60
+
+-- How many flags before acting, and how long a flag stays on the record. One
+-- odd reading in a lag spike should not sit there waiting for two more.
+Config.MOVEMENT_STRIKES = 3
+Config.MOVEMENT_STRIKE_WINDOW = 10
+
+-- When the game itself flings somebody -- a dash, an explosion, the NPC's
+-- tackle -- it tells the guard how fast they are about to travel. This multiplies
+-- that figure, because a launch bounces and a dash slides, so the real peak is
+-- a little above the number the game asked for.
+Config.MOVEMENT_GRANT_HEADROOM = 1.6
+
+-- HOW LONG A DASH'S MOMENTUM IS FORGIVEN FOR.
+--
+-- A dash does not just end. Jump straight after one and you are in the air with
+-- no friction at all, keeping the full 85 studs/s until you land -- and Low
+-- Gravity makes that hang time roughly two and a half times longer. Land on Ice
+-- Shoes and you keep most of it again while you slide.
+--
+-- So a dash buys the full dash speed for this long, not the slower slide speed
+-- for a moment. Anything less and a player chaining a dash into a jump onto ice
+-- -- ordinary, skilful play -- gets flagged as a cheat.
+--
+-- The trade: somebody with a dash charge could travel fast for this long
+-- without being flagged. That is deliberate. Sustained speed is not the
+-- dangerous cheat in this game -- you still have to touch somebody to pass the
+-- bomb, and the holder is faster than everyone anyway. The cheat that actually
+-- wins games is appearing next to someone instantly, and that is caught by
+-- MOVEMENT_TELEPORT_STUDS regardless of any permission.
+Config.MOVEMENT_MOMENTUM_SECONDS = 6
+
+--=============================================================================
+-- STATS AND LEADERBOARDS
+--=============================================================================
+-- What the game counts, and what it shows for it. The catalogue of statistics
+-- itself -- their names, and which boards get a daily/weekly/monthly version --
+-- lives in src/shared/Stats.luau. See STATS_PLAN.md.
+
+Config.STATS_ENABLED = true
+
+-- Prints every single increment to the output. Useful while checking that
+-- something is counted where you think it is; very noisy otherwise.
+Config.STATS_DEBUG_LOG = false
+
+-- Do abilities used in the LOBBY count towards "Ability king"?
+--
+-- Off, and it matters: the practice range hands out an ability every couple of
+-- seconds forever, so counting them would let anybody top that board by
+-- standing in the lobby and never playing a round.
+Config.COUNT_PRACTICE_ABILITIES = false
+
+-- Which statistics appear in Roblox's own player list. Keep it to two or three
+-- -- more than that is unreadable on a phone, and all five show properly on the
+-- boards in the lobby anyway. Names must match ids in Stats.luau.
+Config.LEADERSTATS_COLUMNS = { "SurviveSeconds", "Passes" }
+
+-- How often the player list is repainted. A punch counter does not need to be
+-- frame-accurate, and a slow tick turns a burst of clicks into one update.
+Config.STATS_REFRESH_SECONDS = 1
+
+-- Least time between two punches that both count, in seconds. Without this an
+-- auto-clicker owns the punch board outright.
+Config.CLICKER_MIN_PUNCH_INTERVAL = 0.15
+
+--=============================================================================
+-- SAVING THE STATS
+--=============================================================================
+-- This is the first thing in the project that can lose something a player
+-- earned and cannot get back. Everything else here, if it breaks, produces a
+-- funny explosion.
+--
+-- Studio ALWAYS uses a separate save file with "_studio" on the end of its name,
+-- so playtesting can never touch a real player's history. That means you can
+-- test saving properly without risking anything -- but Studio has to be allowed
+-- to reach the service at all first:
+--
+--     Game Settings -> Security -> Enable Studio Access to API Services
+--
+-- With that off, the game runs perfectly and simply does not save, and says so
+-- once in the output rather than filling it with errors.
+
+Config.STATS_SAVE_ENABLED = true
+
+-- The name of the save file. The version number is part of it deliberately: if
+-- the shape of what we store ever has to change, bumping this starts clean
+-- rather than trying to repair half-old data.
+Config.STATS_STORE_NAME = "HotPotatoStats_v1"
+
+-- How often each player's progress is written, in seconds. Nothing is written
+-- per punch or per pass -- those add up in memory and go out together. Each
+-- player's turn is staggered so ten of them do not all write in the same second.
+Config.STATS_FLUSH_SECONDS = 60
+
+-- How many times to retry a failed load, and the first gap between tries (it
+-- doubles each time: 1, 2, 4, 8). Getting this wrong is the worst thing that can
+-- happen here, so it tries hard before giving up.
+Config.STATS_LOAD_ATTEMPTS = 4
+Config.STATS_RETRY_BASE = 1
+
+-- How long the server waits on its way down for everybody's progress to finish
+-- saving. Without this, shutting down loses up to a whole flush interval, and
+-- players see their numbers go backwards -- the most trust-destroying thing a
+-- leaderboard can do.
+Config.STATS_SHUTDOWN_WAIT = 25
+
+--=============================================================================
+-- THINGS FOR SALE
+--=============================================================================
+-- OFF, and it must stay off until the products actually exist. See the notes at
+-- the top of src/shared/Products.luau -- you create each one in the Creator
+-- Dashboard, paste its id in, and then turn this on.
+--
+-- Everything for sale is cosmetic. Nothing bought changes who wins a round,
+-- deliberately: the game keeps leaderboards for surviving, passing and abilities,
+-- and anything purchasable that affected those would turn them into a measure of
+-- spending rather than skill.
+Config.PRODUCTS_ENABLED = false
+
+-- THE SHOP. A row of pedestals along one lobby wall, one per colour. Walk onto
+-- one to buy it, or to wear it if you already own it. See STORE.md.
+Config.SHOP_SPACING = 14 -- gap between pedestals, in studs
+Config.SHOP_PAD_RADIUS = 5 -- how close you must get, in studs
+Config.SHOP_CHECK_INTERVAL = 0.2 -- how often the pedestals look for players
+
+-- Least time between two purchase prompts for the same player, in seconds.
+-- Roblox's own window takes a moment to appear, and without this walking across
+-- two pedestals would stack prompts on top of each other.
+Config.SHOP_PROMPT_COOLDOWN = 2
+
+--=============================================================================
+-- THE BOARDS IN THE LOBBY
+--=============================================================================
+-- Each board is a flat part with the text drawn onto one of its faces. The code
+-- does NOT build them at fixed positions and hope -- it goes looking for any
+-- part wearing the tag below, which is the same trick that makes the arena floor
+-- and the pickup zones swappable.
+--
+-- TO REPLACE THESE WITH YOUR OWN SIGNS:
+--   1. Build a sign however you like -- a flat part, or a model with a flat front
+--   2. Select it, open View -> Tag Editor, and add the tag named below
+--   3. Add an Attribute called StatId, set to one of: SurviveSeconds, Passes,
+--      AbilityUses, Punches, RobuxSpent
+--   4. Optionally add an Attribute called Period: AllTime, Daily, Weekly or
+--      Monthly. Left out, RobuxSpent cycles through all four and everything else
+--      shows all-time
+--   5. Optionally add an Attribute called Face if the text should be on a
+--      different side: Front, Back, Left, Right, Top or Bottom
+--
+-- As soon as ANYTHING carries that tag, the code stops generating its own
+-- placeholder slabs and uses yours instead. Nothing to delete twice.
+Config.TAG_SCOREBOARD = "HotPotatoScoreboard"
+
+Config.SCOREBOARD_ENABLED = true
+Config.SCOREBOARD_ROWS = 10 -- how many names each board lists
+
+-- How often one board is refreshed. Boards take turns rather than all
+-- refreshing together: reading a sorted board is a rationed request, and eight
+-- of them in the same instant can exceed what Roblox allows in one go.
+Config.SCOREBOARD_REFRESH_SECONDS = 20
+
+-- How long the Robux board shows each of its four periods before moving on.
+-- Cycling comes out of memory, so it costs nothing.
+Config.SCOREBOARD_CYCLE_SECONDS = 12
+
+-- The placeholder slabs, if you have not tagged your own. Sizes in studs.
+Config.SCOREBOARD_WIDTH = 16
+Config.SCOREBOARD_HEIGHT = 13
+Config.SCOREBOARD_SPACING = 19
 
 --=============================================================================
 -- SOUNDS

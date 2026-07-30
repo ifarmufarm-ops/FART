@@ -25,6 +25,8 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 
+local StatsService = require(script.Parent.StatsService)
+
 local GhostClicker = {}
 
 local COLOR_BODY = Color3.fromRGB(196, 108, 220)
@@ -41,6 +43,10 @@ local thump: Sound? = nil
 -- of the stats work, which is a later stage.
 local totalPunches = 0
 local punchesBy: { [Player]: number } = {}
+
+-- When each player last landed a counted punch, so an auto-clicker cannot farm
+-- the board. See Config.CLICKER_MIN_PUNCH_INTERVAL.
+local lastPunchAt: { [Player]: number } = {}
 
 -- Who is allowed to hit it. Wired from init.server.luau.
 local canPunch: (Player) -> boolean = function()
@@ -269,8 +275,17 @@ function GhostClicker.punch(player: Player): number?
 		return nil
 	end
 
+	-- An auto-clicker would otherwise own the punch board outright. The distance
+	-- check above stops remote clicking; this stops absurd rates.
+	local clock = os.clock()
+	if clock - (lastPunchAt[player] or 0) < Config.CLICKER_MIN_PUNCH_INTERVAL then
+		return nil
+	end
+	lastPunchAt[player] = clock
+
 	totalPunches += 1
 	punchesBy[player] = (punchesBy[player] or 0) + 1
+	StatsService.add(player, "Punches", 1)
 	refreshLabel()
 
 	if thump then
@@ -292,6 +307,7 @@ end
 
 Players.PlayerRemoving:Connect(function(player)
 	punchesBy[player] = nil
+	lastPunchAt[player] = nil
 end)
 
 --=============================================================================
