@@ -747,6 +747,71 @@ Config.GUM_FLASH_BRIGHTNESS = 9
 Config.GUM_FLASH_RANGE = 20
 Config.GUM_FLASH_TIME = 0.35
 
+--=============================================================================
+-- "???" -- THE GLITCH EFFECT
+--=============================================================================
+-- Reality failing. Frozen copies of you left hanging in the air, the colour
+-- channels tearing apart into red, green and blue, and shards flickering in and
+-- out around you.
+--
+-- The copies are real cloned body parts, so these numbers decide how much work
+-- the effect makes. Each copy is a whole body. Turn them down first if it ever
+-- feels heavy on a phone.
+
+-- Frozen copies of you, left behind and fading.
+Config.GLITCH_GHOSTS = 4 -- how many, on a dash
+Config.GLITCH_GHOST_GAP = 0.055 -- seconds between each one appearing
+Config.GLITCH_GHOST_FADE = 0.45 -- how long one takes to disappear
+Config.GLITCH_GHOST_START = 0.35 -- how solid it starts (0 solid, 1 invisible)
+
+-- THE COLOUR TEAR. Three copies of you at once, one pure red, one green, one
+-- blue, offset slightly apart -- the way a broken screen splits an image.
+Config.GLITCH_SPLIT_OFFSET = 1.1 -- how far apart the three are pulled, in studs
+Config.GLITCH_SPLIT_FADE = 0.3
+
+-- SHARDS. Small flat pieces that snap into existence at random angles around
+-- you and vanish again, never lasting more than a frame or two.
+Config.GLITCH_SHARDS = 22
+Config.GLITCH_SHARD_SPREAD = 7 -- how far out they appear, in studs
+Config.GLITCH_SHARD_LIFE = 0.14
+Config.GLITCH_SHARD_SIZE = 1.9
+
+-- SCAN LINES. Flat bars that sweep through you, like a screen refreshing.
+Config.GLITCH_SCANLINES = 5
+Config.GLITCH_SCAN_TIME = 0.4
+
+--=============================================================================
+-- "!!!" -- THE PRISMATIC EFFECT
+--=============================================================================
+-- Every colour, cycling constantly, so it never looks the same twice. Shards
+-- orbiting you on ribbons of light, rings stacked one after another, and the
+-- whole thing lit by something that will not settle on a colour.
+
+Config.PRISM_CYCLE_SPEED = 1.6 -- how fast the colour sweeps, cycles per second
+
+-- ORBITERS. Small prisms circling you, each trailing a ribbon, spiralling
+-- outwards as they go.
+Config.PRISM_ORBITERS = 7
+Config.PRISM_ORBIT_RADIUS = 4.5 -- studs from you at the start
+Config.PRISM_ORBIT_GROWTH = 9 -- how much further out they get by the end
+Config.PRISM_ORBIT_SPEED = 4.2 -- radians per second
+Config.PRISM_ORBIT_TIME = 1.5 -- how long they last
+Config.PRISM_ORBIT_SIZE = 1.1
+
+-- BEAMS from you to each orbiter, so the whole thing is strung together with
+-- light rather than being a cloud of separate bits.
+Config.PRISM_BEAM_WIDTH = 0.8
+
+-- RINGS, fired one after another rather than together, so it reads as a pulse
+-- rather than a single pop.
+Config.PRISM_RINGS = 4
+Config.PRISM_RING_GAP = 0.09
+Config.PRISM_RING_SIZE = 26
+Config.PRISM_RING_TIME = 0.55
+
+Config.PRISM_FLASH_BRIGHTNESS = 14
+Config.PRISM_FLASH_RANGE = 34
+
 -- THE SHOP. A row of pedestals along one lobby wall, one per colour. Walk onto
 -- one to buy it, or to wear it if you already own it. See STORE.md.
 Config.SHOP_SPACING = 14 -- gap between pedestals, in studs

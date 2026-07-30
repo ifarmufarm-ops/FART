@@ -19,6 +19,8 @@ Five fart colours. That is all, and deliberately so.
 | Deep Freeze | 25 | Pale blue |
 | Solid Gold | 99 | Yellow-gold |
 | Full Spectrum | 149 | Red into blue |
+| **???** | 399 | Reality failing — see below |
+| **!!!** | 399 | Every colour at once — see below |
 
 They change the colour of **everything you leave behind** -- both the fart jump's
 puff and the dash's trail. One purchase covers both, so a colour somebody paid
@@ -39,10 +41,35 @@ cloud it gets four layers:
 
 All built from what Roblox ships — nothing to upload.
 
+## The two top-tier ones
+
+Both 399 Robux, and both deliberately over the top.
+
+### "???" — reality failing
+
+| Layer | What it does |
+|---|---|
+| **Frozen copies of you** | Your body is copied part by part into a still image, left hanging where you were, and faded out. Several of them, a few hundredths of a second apart, so you smear through time. **Dash only** — on a jump they would just stack in one spot |
+| **The colour tear** | The same instant rendered three times, one pure red, one green, one blue, pulled apart — the way a broken screen splits an image |
+| **Shards** | Flat fragments snapping in and out at random angles. Deliberately solid parts, not particles: hard edges look broken, particles always look like smoke |
+| **Scan lines** | Flat bars chasing each other up through you, like a screen refreshing |
+
+### "!!!" — every colour at once
+
+| Layer | What it does |
+|---|---|
+| **Nothing holds a colour** | One loop drives the whole effect off a single sweeping hue, so the orbiters, ribbons, beams and light are all different colours at the same instant and all changing together. That shared timing is what stops it looking like a bag of random bright objects |
+| **Orbiters** | Seven prisms circling you, spiralling outwards, each trailing a ribbon of light |
+| **Beams** | A beam from you to every orbiter, so the whole thing is strung together rather than being a cloud of separate bits |
+| **Ring pulse** | Four rings fired one after another, not together — a pulse rather than a single pop |
+
+The orbiters **follow you**, so the effect travels with a dash instead of being
+left behind at the launch point.
+
 **Adding a fancy one later** is a two-line job: give the product a
 `vfx = "SomeName"` in `Products.luau`, and add a branch for that name in
 `src/server/CosmeticVfx.luau`. Anything without a `vfx` stays a plain recolour,
-so the other four are untouched.
+so the plain four are untouched.
 
 Every number is a dial in `Config.luau` under **BUBBLEGUM'S EXTRA EFFECTS**, and
 `COSMETIC_VFX_ENABLED = false` turns the whole thing off to compare.

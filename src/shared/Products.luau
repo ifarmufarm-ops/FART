@@ -99,6 +99,29 @@ Products.list = {
 		colorFrom = Color3.fromRGB(255, 108, 108),
 		colorTo = Color3.fromRGB(108, 168, 255),
 	},
+
+	--- THE TOP TWO. Both deliberately over the top. -------------------------
+	{
+		id = "GlitchFart",
+		productId = 0,
+		name = "???",
+		blurb = "Something has gone wrong with you.",
+		price = 399,
+		-- Sickly cyan-magenta, the colour of a broken screen.
+		colorFrom = Color3.fromRGB(120, 255, 246),
+		colorTo = Color3.fromRGB(255, 60, 200),
+		vfx = "Glitch",
+	},
+	{
+		id = "PrismFart",
+		productId = 0,
+		name = "!!!",
+		blurb = "Every colour there is, and some there aren't.",
+		price = 399,
+		colorFrom = Color3.fromRGB(255, 255, 255),
+		colorTo = Color3.fromRGB(180, 180, 255),
+		vfx = "Prism",
+	},
 }
 
 -- What everybody has before buying anything.
