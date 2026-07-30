@@ -354,7 +354,10 @@ Config.PICKUP_COLLECT_RADIUS = 4
 --     require(game.ServerScriptService.Server.Pickups).iconsThroughWalls(false)
 --
 -- so you can feel the difference immediately. See BALANCE.md.
-Config.PICKUP_ICONS_THROUGH_WALLS = true
+--
+-- Set to false after trying both: having to look round pillars and crates to
+-- find pickups makes the map matter and rewards knowing it.
+Config.PICKUP_ICONS_THROUGH_WALLS = false
 
 -- How high above the floor a pickup hovers.
 Config.PICKUP_FLOAT_HEIGHT = 3

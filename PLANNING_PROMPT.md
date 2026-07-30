@@ -12,29 +12,39 @@ We are picking up Hot Potato Bomb, a Roblox game at this repo. You have no
 memory of previous sessions beyond your memory files and what is written here.
 
 Read these first, in this order, before asking me anything or proposing work:
-  1. README.md            -- what the game is, how to run it, and a section at
-                             the end listing what has never been tested
-  2. LOBBY_PLAN.md        -- the agreed next piece of work, already decided
-  3. src/shared/Config.luau -- every tunable, commented in gameplay terms
-  4. MAP_INTEGRATION.md   -- only if the task involves maps
-  5. git log              -- the commit messages explain the whole build
+  1. HANDOVER.md          -- where the project is RIGHT NOW: what is built, what
+                             is switched off and why, what has never been
+                             verified, and what to do next. Start here
+  2. README.md            -- what the game is and how to run it
+  3. BALANCE.md           -- the numbers that change how it plays
+  4. src/shared/Config.luau -- every tunable, commented in gameplay terms
+  5. STORE.md             -- only if the task involves anything for sale
+  6. STATS_PLAN.md        -- only if the task involves stats or leaderboards
+  7. MAP_INTEGRATION.md   -- only if the task involves maps
+  8. git log              -- the commit messages explain the whole build,
+                             including what was measured and what was not
 
 Then tell me, briefly:
   - what you understand the current state to be
   - what the agreed next step is
   - anything in the docs that looks stale or contradictory
 
-Do NOT relitigate decisions already recorded in LOBBY_PLAN.md or your memory
-(one place not two, no concurrent arenas, the Low Gravity constraint). If you
-think one is wrong, say so in a sentence and let me decide -- do not silently
-redesign around it.
+Do NOT relitigate decisions already recorded in the docs or your memory. The
+settled ones include: one place not two, no concurrent arenas, Low Gravity as a
+per-character force, nothing purchasable affecting who wins, and survive time
+counting only while alive in a round. If you think one is wrong, say so in a
+sentence and let me decide -- do not silently redesign around it.
 
 To get set up:
   - run `rojo serve` from the project root and ask me to click Connect in the
-    Studio plugin
-  - Config.TEST_MODE may still be true; check before assuming the game is in
-    its real form
-  - always stop Play, confirm the synced source, then start Play
+    Studio plugin. If rojo restarts, the plugin disconnects and syncs silently
+    stop until I reconnect it
+  - check which switches are on: TEST_MODE, SOLO_TEST_MODE, MOVEMENT_CORRECT and
+    PRODUCTS_ENABLED should all be false in normal play
+  - ALWAYS stop Play, confirm the synced source contains your change, then start
+    Play. Rojo's push is not instant, and testing stale code has produced
+    convincing false failures more than once
+  - if you flip a switch to test something, flip it back and say so in the commit
 
 Before proposing anything, ask me how the game actually FELT to play. Numbers
 tell you the code works; only I can tell you whether it is any good.
