@@ -211,6 +211,12 @@ local BLUE = Color3.fromRGB(60, 90, 255)
 	`tint` nil keeps the body's own colours; a colour makes it a flat neon
 	silhouette, which is what the channel-split uses.
 ]]
+-- How many frozen bodies exist across the whole server right now. Each one is a
+-- full copy of somebody's body, so ten players dashing at once is the case worth
+-- guarding: without a ceiling that is well over a thousand parts appearing in the
+-- same instant.
+local liveCopies = 0
+
 local function freezeCopy(
 	character: Model,
 	tint: Color3?,
@@ -218,6 +224,10 @@ local function freezeCopy(
 	fade: number,
 	startTransparency: number
 ): Model?
+	if liveCopies >= Config.GLITCH_MAX_COPIES then
+		return nil
+	end
+
 	local ghost = Instance.new("Model")
 	ghost.Name = "GlitchGhost"
 
@@ -266,6 +276,13 @@ local function freezeCopy(
 
 	ghost.Parent = workspace
 	Debris:AddItem(ghost, fade + 0.4)
+
+	-- Counted while it exists and released when it goes, so the ceiling above
+	-- tracks reality rather than a running total.
+	liveCopies += 1
+	task.delay(fade + 0.4, function()
+		liveCopies = math.max(0, liveCopies - 1)
+	end)
 
 	local info = TweenInfo.new(fade, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	for _, part in ghost:GetChildren() do
@@ -524,6 +541,11 @@ local function orbiters(root: BasePart)
 	light.Range = Config.PRISM_FLASH_RANGE
 	light.Shadows = false
 	light.Parent = root
+	-- The loop below tidies these up itself, but give them a deadline as well: if
+	-- the loop is ever cut short in a way not anticipated, a light and an
+	-- attachment left welded to a player would follow them around all session.
+	Debris:AddItem(light, Config.PRISM_ORBIT_TIME + 1)
+	Debris:AddItem(hub, Config.PRISM_ORBIT_TIME + 1)
 
 	local started = os.clock()
 	local connection: RBXScriptConnection? = nil

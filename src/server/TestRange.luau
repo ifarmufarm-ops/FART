@@ -157,12 +157,10 @@ end
 local function onHeartbeat()
 	local clock = os.clock()
 
-	-- Spin them, same as the real pickups.
+	-- Refill anything taken. The turning and bobbing is done on each player's own
+	-- machine now, same as the real pickups -- see src/client/PickupSpin.luau.
 	for _, pedestal in pedestals do
-		if pedestal.model then
-			pedestal.model.CFrame = CFrame.new(pedestal.position) * CFrame.Angles(0, clock * 1.6, 0)
-		elseif clock >= pedestal.readyAt then
-			-- Time's up: put it back.
+		if not pedestal.model and clock >= pedestal.readyAt then
 			pedestal.model = Pickups.buildVisual(pedestal.definition, pedestal.position, folder)
 		end
 	end

@@ -407,6 +407,10 @@ local AbilityInput = require(script.AbilityInput)
 -- file; they are independent of the round HUD.
 require(script.ScreenEffects).start()
 
+-- The pickups turn and bob here rather than on the server, which saves sending
+-- decorative motion to everybody sixty times a second. See PickupSpin.luau.
+require(script.PickupSpin).start()
+
 AbilityInput.start(function(definition, usesLeft)
 	if not definition then
 		slot.Visible = false

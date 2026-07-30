@@ -359,18 +359,22 @@ end
 -- RUNNING
 --=============================================================================
 
+--[[
+	THE SPIN AND BOB ARE NOT DONE HERE ANY MORE.
+
+	They used to be: the server rewrote every pickup's CFrame every frame. That
+	is up to fourteen parts having their position sent to every player sixty times
+	a second, forever, for something purely decorative -- comfortably the largest
+	continuous cost in the game, and it grew every time the pickup count went up.
+
+	Each player's own machine now animates them instead (see
+	src/client/PickupSpin.luau). Nothing is lost: the server leaves each pickup
+	sitting at its base position, and collection measures from that, so what
+	counts as "close enough to collect" is unchanged and still decided by the
+	server.
+]]
 local function onHeartbeat()
 	local clock = os.clock()
-
-	-- Spin and bob. One connection drives every pickup rather than one each.
-	-- Always measured from the stored base position, never from where the part
-	-- currently is, or the bob would creep further each frame.
-	for _, entry in active do
-		local bob = math.sin(clock * 2 + entry.phase) * 0.35
-		entry.model.CFrame = CFrame.new(entry.base + Vector3.new(0, bob, 0))
-			* CFrame.Angles(0, clock * 1.6, 0)
-	end
-
 	if clock >= nextCollectCheck then
 		nextCollectCheck = clock + 0.1
 		checkCollection()

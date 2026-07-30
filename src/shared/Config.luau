@@ -359,6 +359,15 @@ Config.PICKUP_COLLECT_RADIUS = 4
 -- find pickups makes the map matter and rewards knowing it.
 Config.PICKUP_ICONS_THROUGH_WALLS = false
 
+-- The turning and bobbing is done by each player's own machine rather than by
+-- the server. Purely decorative motion does not need sending to everybody sixty
+-- times a second, and at fourteen pickups that was the largest continuous cost
+-- in the game. Set this to false and they simply sit still -- collection is
+-- unaffected either way, because the server measures from where it put them.
+Config.PICKUP_SPIN_ON_CLIENT = true
+Config.PICKUP_SPIN_SPEED = 1.6 -- radians per second
+Config.PICKUP_BOB_HEIGHT = 0.35 -- studs above and below its resting height
+
 -- How high above the floor a pickup hovers.
 Config.PICKUP_FLOAT_HEIGHT = 3
 
@@ -759,6 +768,12 @@ Config.GUM_FLASH_TIME = 0.35
 -- feels heavy on a phone.
 
 -- Frozen copies of you, left behind and fading.
+-- A hard ceiling on frozen bodies across the WHOLE server at once, whatever the
+-- other numbers here say. Each one is a full copy of somebody's body, so ten
+-- players dashing in the same instant is the case that needs a limit -- without
+-- one that is well over a thousand parts appearing together.
+Config.GLITCH_MAX_COPIES = 14
+
 Config.GLITCH_GHOSTS = 4 -- how many, on a dash
 Config.GLITCH_GHOST_GAP = 0.055 -- seconds between each one appearing
 Config.GLITCH_GHOST_FADE = 0.45 -- how long one takes to disappear

@@ -73,6 +73,22 @@ local function isParticipant(player: Player): boolean
 	return false
 end
 
+--[[
+	The participant list as a lookup table, built ONCE.
+
+	Asking isParticipant() per player looked harmless and was not: the provider
+	hands back a fresh copy of the list every call, so answering ten yes/no
+	questions meant building ten copies of the same list. Anything looping over
+	every player should use this instead.
+]]
+local function participantSet(): { [Player]: boolean }
+	local set = {}
+	for _, player in getParticipants() do
+		set[player] = true
+	end
+	return set
+end
+
 local function now(): number
 	return workspace:GetServerTimeNow()
 end
@@ -97,8 +113,9 @@ local function broadcast()
 	-- actively clears them -- including for somebody who walks out of a round
 	-- while Reverse Controls is still running.
 	local empty = {}
+	local participants = participantSet()
 	for _, player in Players:GetPlayers() do
-		Remotes.ModifierChanged:FireClient(player, if isParticipant(player) then list else empty)
+		Remotes.ModifierChanged:FireClient(player, if participants[player] then list else empty)
 	end
 end
 

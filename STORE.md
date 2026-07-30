@@ -71,8 +71,34 @@ left behind at the launch point.
 `src/server/CosmeticVfx.luau`. Anything without a `vfx` stays a plain recolour,
 so the plain four are untouched.
 
-Every number is a dial in `Config.luau` under **BUBBLEGUM'S EXTRA EFFECTS**, and
-`COSMETIC_VFX_ENABLED = false` turns the whole thing off to compare.
+## Tweaking the effects
+
+Every number is a dial in `src/shared/Config.luau`, in three blocks:
+
+| Block | Controls |
+|---|---|
+| `BUBBLEGUM'S EXTRA EFFECTS` | Bubblegum. `GUM_*` |
+| `"???" -- THE GLITCH EFFECT` | ???. `GLITCH_*` |
+| `"!!!" -- THE PRISMATIC EFFECT` | !!!. `PRISM_*` |
+
+`COSMETIC_VFX_ENABLED = false` turns all three off at once, so every cosmetic
+goes back to being a plain recolour. Useful for comparing.
+
+**If one feels like too much,** these are the dials that dominate each — change
+these before anything else:
+
+| Effect | Turn this down |
+|---|---|
+| Bubblegum | `GUM_GLITTER_BURST`, then `GUM_RING_SIZE` |
+| ??? | `GLITCH_GHOSTS` (each one is a whole copy of your body), then `GLITCH_SHARDS` |
+| !!! | `PRISM_ORBITERS`, then `PRISM_RINGS` |
+
+**If one feels heavy on a phone,** the same three are also the expensive ones,
+for the same reason — they each multiply how many things exist at once.
+`GLITCH_MAX_COPIES` is a hard ceiling on the frozen bodies regardless of the
+other glitch dials.
+
+Changes take effect on the next Play; nothing here needs a rebuild.
 
 ## The rule: cosmetic only
 

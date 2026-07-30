@@ -160,21 +160,51 @@ end
 -- TAKING ONE
 --=============================================================================
 
-local function onHeartbeat()
-	local clock = os.clock()
+--[[
+	Is anybody actually near enough to use the range?
 
-	for _, pedestal in pedestals do
-		if pedestal.model then
-			pedestal.model.CFrame = CFrame.new(pedestal.position) * CFrame.Angles(0, clock * 1.6, 0)
-		elseif clock >= pedestal.readyAt then
-			pedestal.model = Pickups.buildVisual(pedestal.definition, pedestal.position, folder)
+	Without this the range did its full round of work every single frame even with
+	nobody within six hundred studs of the lobby -- and unlike a round, it is
+	always on, so that was forever.
+
+	Deliberately generous: it only has to be cheaper than the work it skips, and
+	being wrong by a few studs costs nothing but a fraction of a second's delay
+	before a pedestal refills.
+]]
+local function anybodyNear(): boolean
+	local centre = Config.LOBBY_CENTER
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if root and root:IsA("BasePart") then
+			local flat = Vector3.new(root.Position.X - centre.X, 0, root.Position.Z - centre.Z)
+			if flat.Magnitude < Config.LOBBY_SIZE then
+				return true
+			end
 		end
 	end
+	return false
+end
+
+local function onHeartbeat()
+	local clock = os.clock()
 
 	if clock < nextCheck then
 		return
 	end
 	nextCheck = clock + 0.1
+
+	if not anybodyNear() then
+		return
+	end
+
+	-- Refill anything that has been taken. The turning and bobbing is done on
+	-- each player's own machine now, so there is nothing to animate here.
+	for _, pedestal in pedestals do
+		if not pedestal.model and clock >= pedestal.readyAt then
+			pedestal.model = Pickups.buildVisual(pedestal.definition, pedestal.position, folder)
+		end
+	end
 
 	-- Everybody is a candidate; standing within arm's reach of a pedestal in the
 	-- lobby is the only qualification, and nobody in a round is anywhere near it.

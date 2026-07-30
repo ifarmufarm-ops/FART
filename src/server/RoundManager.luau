@@ -268,8 +268,19 @@ local function broadcast()
 
 	-- Every payload is per-player now, because "are you in the queue" differs
 	-- for each of them.
+	--
+	-- The membership list is turned into a lookup table once rather than being
+	-- searched per player. Searching it each time made this cost grow with the
+	-- square of the player count, for an answer that never changes mid-loop.
+	local members: { [Player]: boolean } = {}
+	if roundActive then
+		for _, member in roundMembers do
+			members[member] = true
+		end
+	end
+
 	for _, player in Players:GetPlayers() do
-		local mine = if roundActive and not isRoundMember(player) then idleState() else table.clone(state)
+		local mine = if roundActive and not members[player] then idleState() else table.clone(state)
 		mine.queued = isQueued(player)
 		Remotes.StateChanged:FireClient(player, mine)
 	end
