@@ -139,7 +139,9 @@ function Lobby.build(): Model
 	lobby.Parent = workspace
 
 	spawnPoints = {}
-	local SPAWN_RADIUS = HALF - 18
+	-- Kept well inside the wall so the ring clears the practice range standing
+	-- against it. See Config.LOBBY_SPAWN_INSET for what happened when it did not.
+	local SPAWN_RADIUS = HALF - Config.LOBBY_SPAWN_INSET
 	local PAD_THICKNESS = 1
 	local padTop = FLOOR_TOP + PAD_THICKNESS
 	-- Players are placed by their ROOT, which sits about 3 studs above their

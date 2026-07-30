@@ -46,6 +46,13 @@ local StatsStore = {}
 export type Profile = {
 	version: number,
 	totals: { [string]: number },
+	-- Cosmetics this player has bought, and which one they are using.
+	owned: { [string]: boolean },
+	equipped: string?,
+	-- The last purchase receipt we handled. Roblox re-delivers a receipt until
+	-- the game confirms it, so without remembering this a single purchase can be
+	-- granted and counted several times.
+	lastPurchaseId: string?,
 	-- One entry per period that any statistic asks for. `bucket` is which day,
 	-- week or month these numbers belong to; when it no longer matches the
 	-- current one, the values are cleared. That is how the daily board resets
@@ -59,7 +66,11 @@ export type Profile = {
 StatsStore.available = false
 
 local store: DataStore? = nil
-local warnedUnavailable = false
+
+-- What each loaded player owns and is wearing, kept here because this is the
+-- file that read it. Saves anything else needing its own trip to the datastore
+-- just to find out what colour somebody's fart should be.
+local cosmetics: { [number]: { owned: { [string]: boolean }, equipped: string? } } = {}
 
 local function log(message: string)
 	if Config.STATS_DEBUG_LOG then
@@ -71,6 +82,9 @@ local function blank(): Profile
 	return {
 		version = 1,
 		totals = Stats.blank(),
+		owned = {},
+		equipped = nil,
+		lastPurchaseId = nil,
 		periods = {},
 		lastSeen = 0,
 	}
@@ -152,8 +166,14 @@ function StatsStore.load(userId: number): (Profile, boolean)
 
 		if ok then
 			if result == nil then
+				-- A brand new player still needs a cosmetics entry. Without one,
+				-- getCosmetics() below hands back a throwaway table, and anything
+				-- written into it -- a purchase, an equip -- is silently dropped
+				-- until they next rejoin.
+				local fresh = blank()
+				cosmetics[userId] = { owned = fresh.owned, equipped = fresh.equipped }
 				log(("%d is new"):format(userId))
-				return blank(), true
+				return fresh, true
 			end
 			if typeof(result) == "table" then
 				local profile = result :: any
@@ -162,9 +182,11 @@ function StatsStore.load(userId: number): (Profile, boolean)
 				profile.version = profile.version or 1
 				profile.totals = profile.totals or {}
 				profile.periods = profile.periods or {}
+				profile.owned = profile.owned or {}
 				for _, id in Stats.ids() do
 					profile.totals[id] = profile.totals[id] or 0
 				end
+				cosmetics[userId] = { owned = profile.owned, equipped = profile.equipped }
 				log(("%d loaded"):format(userId))
 				return profile :: Profile, true
 			end
@@ -198,6 +220,7 @@ local function applyDelta(stored: Profile?, delta: { [string]: number }, at: num
 	local profile = stored or blank()
 	profile.totals = profile.totals or {}
 	profile.periods = profile.periods or {}
+	profile.owned = profile.owned or {}
 
 	for id, amount in delta do
 		profile.totals[id] = (profile.totals[id] or 0) + amount
@@ -420,6 +443,127 @@ function StatsStore.getBoard(statId: string, period: Stats.Period, count: number
 		end
 	end
 	return rows
+end
+
+--=============================================================================
+-- PURCHASES
+--=============================================================================
+
+--[[
+	What this player owns and is wearing, as read when they joined. Empty for
+	anybody whose history could not be read, which means they see the default
+	look rather than something they have not paid for.
+]]
+function StatsStore.getCosmetics(userId: number): { owned: { [string]: boolean }, equipped: string? }
+	local existing = cosmetics[userId]
+	if existing then
+		return existing
+	end
+	-- Create and KEEP it rather than handing back a throwaway. A caller that
+	-- writes into a temporary table gets no error and no effect, which is the
+	-- worst combination -- a purchase that quietly does not apply.
+	local fresh = { owned = {}, equipped = nil }
+	cosmetics[userId] = fresh
+	return fresh
+end
+
+function StatsStore.forget(userId: number)
+	cosmetics[userId] = nil
+end
+
+export type PurchaseResult = "granted" | "already" | "failed"
+
+--[[
+	Records a purchase: unlocks the cosmetic and counts the Robux, in ONE write.
+
+	The duplicate check happens INSIDE the write, not before it. That matters and
+	is the whole reason this is not built out of the ordinary save path: Roblox
+	keeps re-delivering a receipt until the game confirms it, so checking "have I
+	seen this receipt?" as a separate step leaves a gap where two deliveries can
+	both pass the check and both be counted. Doing it inside the update makes the
+	check and the write a single indivisible step, which holds even if the two
+	deliveries land on different servers.
+
+	Returns:
+	  "granted" -- applied now
+	  "already" -- this exact receipt was handled before; the caller should still
+	               tell Roblox yes, so it stops re-delivering, but must NOT count
+	               it again
+	  "failed"  -- could not be written; the caller must tell Roblox to try later
+]]
+function StatsStore.recordPurchase(
+	userId: number,
+	purchaseId: string,
+	cosmeticId: string,
+	robuxSpent: number
+): PurchaseResult
+	if not StatsStore.available or not store then
+		return "failed"
+	end
+
+	local currentStore = store :: DataStore
+	local at = os.time()
+	local outcome: PurchaseResult = "failed"
+	local merged: Profile? = nil
+
+	local ok, err = pcall(function()
+		merged = currentStore:UpdateAsync(keyFor(userId), function(stored)
+			local profile = stored or blank()
+			profile.totals = profile.totals or {}
+			profile.periods = profile.periods or {}
+			profile.owned = profile.owned or {}
+
+			if profile.lastPurchaseId == purchaseId then
+				-- Seen this one. Change nothing at all, so returning the profile
+				-- untouched is safe.
+				outcome = "already"
+				return profile
+			end
+
+			profile.owned[cosmeticId] = true
+			-- First thing they buy becomes what they are wearing, so a purchase
+			-- visibly does something without needing a shop screen first.
+			if profile.equipped == nil then
+				profile.equipped = cosmeticId
+			end
+			profile.lastPurchaseId = purchaseId
+
+			local delta = { RobuxSpent = robuxSpent }
+			profile = applyDelta(profile, delta, at)
+			outcome = "granted"
+			return profile
+		end)
+	end)
+
+	if not ok then
+		log(("purchase write failed for %d: %s"):format(userId, tostring(err)))
+		return "failed"
+	end
+
+	if outcome == "granted" and merged then
+		writeBoards(userId, merged :: Profile, { RobuxSpent = robuxSpent })
+	end
+	return outcome
+end
+
+--[[
+	Saves which cosmetic somebody is wearing. Not a purchase, so it does not go
+	near the receipt machinery.
+]]
+function StatsStore.setEquipped(userId: number, cosmeticId: string?): boolean
+	if not StatsStore.available or not store then
+		return false
+	end
+	local currentStore = store :: DataStore
+	local ok = pcall(function()
+		currentStore:UpdateAsync(keyFor(userId), function(stored)
+			local profile = stored or blank()
+			profile.owned = profile.owned or {}
+			profile.equipped = cosmeticId
+			return profile
+		end)
+	end)
+	return ok
 end
 
 --[[

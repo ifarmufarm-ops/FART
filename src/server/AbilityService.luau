@@ -24,7 +24,10 @@ local Abilities = require(ReplicatedStorage.Shared.Abilities)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local Products = require(ReplicatedStorage.Shared.Products)
+
 local MovementGuard = require(script.Parent.MovementGuard)
+local Purchases = require(script.Parent.Purchases)
 local Ragdoll = require(script.Parent.Ragdoll)
 local StatsService = require(script.Parent.StatsService)
 
@@ -283,7 +286,15 @@ local function fartPuff(root: BasePart)
 	local puff = Instance.new("ParticleEmitter")
 	puff.Name = "FartSmoke"
 	puff.Texture = Config.PARTICLE_SMOKE
-	puff.Color = ColorSequence.new(Color3.fromRGB(198, 226, 106), Color3.fromRGB(112, 138, 62))
+
+	-- The one thing a purchase changes. Anybody who has bought nothing gets the
+	-- colours this has always used, so nothing looks different until it should.
+	local owner = Players:GetPlayerFromCharacter(root.Parent)
+	local from, to = Products.DEFAULT_FROM, Products.DEFAULT_TO
+	if owner then
+		from, to = Purchases.getFartColors(owner)
+	end
+	puff.Color = ColorSequence.new(from, to)
 	puff.Size = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.6),
 		NumberSequenceKeypoint.new(1, 4.6),

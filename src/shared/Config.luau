@@ -219,6 +219,15 @@ Config.LOBBY_SIZE = 110 -- width and depth of the lobby floor, in studs
 Config.LOBBY_WALL_HEIGHT = 22 -- perimeter walls, so nobody wanders into the void
 Config.LOBBY_SPAWN_COUNT = 8 -- pads in the ring players appear on
 
+-- How far IN from the lobby wall the ring of spawn pads sits, in studs.
+--
+-- This has to clear the practice range, which stands against one wall. At an
+-- earlier value of 18 a spawn pad ended up 2 studs from the Fart Jump pedestal
+-- -- inside its 4 stud collect radius -- so anybody who happened to spawn there
+-- was handed a free ability the instant they appeared, and the pedestal spent
+-- most of its life empty.
+Config.LOBBY_SPAWN_INSET = 30
+
 -- How often the lobby looks for somebody who has lost their body and puts them
 -- back on their feet. The game hands out every body itself (see
 -- Players.CharacterAutoLoads in RoundManager), so without this a player who
@@ -669,6 +678,19 @@ Config.STATS_RETRY_BASE = 1
 -- players see their numbers go backwards -- the most trust-destroying thing a
 -- leaderboard can do.
 Config.STATS_SHUTDOWN_WAIT = 25
+
+--=============================================================================
+-- THINGS FOR SALE
+--=============================================================================
+-- OFF, and it must stay off until the products actually exist. See the notes at
+-- the top of src/shared/Products.luau -- you create each one in the Creator
+-- Dashboard, paste its id in, and then turn this on.
+--
+-- Everything for sale is cosmetic. Nothing bought changes who wins a round,
+-- deliberately: the game keeps leaderboards for surviving, passing and abilities,
+-- and anything purchasable that affected those would turn them into a measure of
+-- spending rather than skill.
+Config.PRODUCTS_ENABLED = false
 
 --=============================================================================
 -- THE BOARDS IN THE LOBBY

@@ -98,6 +98,23 @@ function StatsService.add(player: Player?, statId: string, delta: number)
 	log(("%s  %s +%s  ->  %s"):format(player.Name, statId, tostring(delta), tostring(profile[statId])))
 end
 
+--[[
+	Brings the live figure into line with something ALREADY saved elsewhere.
+
+	Purchases go straight into the save file, because the duplicate check has to
+	happen inside the same write that grants them. This updates what the player
+	list shows without queueing the amount to be saved a second time -- calling
+	the ordinary add() here would count every purchase twice.
+]]
+function StatsService.noteAlreadySaved(player: Player, statId: string, amount: number)
+	if amount == 0 then
+		return
+	end
+	local profile = profileOf(player)
+	profile[statId] = (profile[statId] or 0) + amount
+	log(("%s  %s +%s (already saved elsewhere)"):format(player.Name, statId, tostring(amount)))
+end
+
 function StatsService.get(player: Player, statId: string): number
 	local profile = totals[player]
 	return if profile then (profile[statId] or 0) else 0

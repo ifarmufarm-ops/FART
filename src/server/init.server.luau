@@ -50,6 +50,7 @@ local Lobby = require(script.Lobby)
 local Modifiers = require(script.Modifiers)
 local MovementGuard = require(script.MovementGuard)
 local PracticeRange = require(script.PracticeRange)
+local Purchases = require(script.Purchases)
 local Queue = require(script.Queue)
 local Ragdoll = require(script.Ragdoll)
 local RoundManager = require(script.RoundManager)
@@ -115,6 +116,11 @@ Queue.start()
 
 -- Counting, the survive clock, and the numbers in Roblox's player list.
 StatsService.start()
+
+-- The receipt handler. Connected even though nothing can be bought yet, because
+-- an unhandled receipt is money taken with nothing given -- Roblox keeps
+-- retrying it, and something has to be there to refuse it properly.
+Purchases.start()
 
 -- Watches for characters covering ground faster than the game allows, which is
 -- the only rule a modified client can actually break -- Roblox gives each player
