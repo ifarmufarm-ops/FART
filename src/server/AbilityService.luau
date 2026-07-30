@@ -220,7 +220,15 @@ local function dashSmoke(root: BasePart)
 	local smoke = Instance.new("ParticleEmitter")
 	smoke.Name = "DashTrace"
 	smoke.Texture = Config.PARTICLE_SMOKE
-	smoke.Color = ColorSequence.new(Color3.fromRGB(206, 232, 128), Color3.fromRGB(118, 146, 68))
+
+	-- Same purchased colour as the fart puff. One cosmetic covers everything you
+	-- leave behind, so a colour somebody paid for is not half applied.
+	local dashOwner = Players:GetPlayerFromCharacter(root.Parent)
+	local dashFrom, dashTo = Products.DASH_DEFAULT_FROM, Products.DASH_DEFAULT_TO
+	if dashOwner then
+		dashFrom, dashTo = Purchases.getDashColors(dashOwner)
+	end
+	smoke.Color = ColorSequence.new(dashFrom, dashTo)
 	smoke.Size = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.7),
 		NumberSequenceKeypoint.new(1, 5.2),
@@ -290,7 +298,7 @@ local function fartPuff(root: BasePart)
 	-- The one thing a purchase changes. Anybody who has bought nothing gets the
 	-- colours this has always used, so nothing looks different until it should.
 	local owner = Players:GetPlayerFromCharacter(root.Parent)
-	local from, to = Products.DEFAULT_FROM, Products.DEFAULT_TO
+	local from, to = Products.FART_DEFAULT_FROM, Products.FART_DEFAULT_TO
 	if owner then
 		from, to = Purchases.getFartColors(owner)
 	end

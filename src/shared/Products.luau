@@ -36,8 +36,9 @@ export type Product = {
 	name: string,
 	blurb: string,
 	price: number, -- for display only; the dashboard is what actually charges
-	-- The two colours the fart cloud fades between. This is the whole of what a
-	-- purchase changes today.
+	-- The two colours the smoke fades between. Used by BOTH the fart jump's puff
+	-- and the dash's trail, so one purchase recolours everything you leave
+	-- behind rather than only half of it.
 	colorFrom: Color3,
 	colorTo: Color3,
 }
@@ -92,10 +93,15 @@ Products.list = {
 	},
 }
 
--- What everybody has before buying anything. Matches the colours the fart puff
--- has always used, so nothing looks different until a purchase is made.
-Products.DEFAULT_FROM = Color3.fromRGB(198, 226, 106)
-Products.DEFAULT_TO = Color3.fromRGB(112, 138, 62)
+-- What everybody has before buying anything.
+--
+-- The fart puff and the dash trail have always used very slightly different
+-- greens, so both are kept exactly as they were. Anybody who has bought nothing
+-- sees no change at all; a purchase then recolours both to the same thing.
+Products.FART_DEFAULT_FROM = Color3.fromRGB(198, 226, 106)
+Products.FART_DEFAULT_TO = Color3.fromRGB(112, 138, 62)
+Products.DASH_DEFAULT_FROM = Color3.fromRGB(206, 232, 128)
+Products.DASH_DEFAULT_TO = Color3.fromRGB(118, 146, 68)
 
 local byId: { [string]: Product } = {}
 local byProductId: { [number]: Product } = {}

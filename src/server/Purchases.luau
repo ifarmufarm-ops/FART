@@ -56,13 +56,18 @@ function Purchases.getEquipped(player: Player): string?
 end
 
 --[[
-	The two colours this player's fart cloud should fade between.
+	The two colours this player's smoke should fade between.
 
-	Falls back to the colours the game has always used, so anybody who has bought
-	nothing -- and anybody whose history could not be read -- looks exactly as
-	before rather than seeing something they did not pay for.
+	One purchase covers everything you leave behind -- the fart jump's puff and
+	the dash's trail both come through here -- so a colour someone paid for is not
+	half applied.
+
+	The two fall back to slightly different greens because that is what each has
+	always used. Anybody who has bought nothing, and anybody whose history could
+	not be read, therefore looks exactly as before rather than seeing something
+	they did not pay for.
 ]]
-function Purchases.getFartColors(player: Player): (Color3, Color3)
+local function colorsFor(player: Player, defaultFrom: Color3, defaultTo: Color3): (Color3, Color3)
 	local equipped = Purchases.getEquipped(player)
 	if equipped and Purchases.owns(player, equipped) then
 		local product = Products.get(equipped)
@@ -70,7 +75,15 @@ function Purchases.getFartColors(player: Player): (Color3, Color3)
 			return product.colorFrom, product.colorTo
 		end
 	end
-	return Products.DEFAULT_FROM, Products.DEFAULT_TO
+	return defaultFrom, defaultTo
+end
+
+function Purchases.getFartColors(player: Player): (Color3, Color3)
+	return colorsFor(player, Products.FART_DEFAULT_FROM, Products.FART_DEFAULT_TO)
+end
+
+function Purchases.getDashColors(player: Player): (Color3, Color3)
+	return colorsFor(player, Products.DASH_DEFAULT_FROM, Products.DASH_DEFAULT_TO)
 end
 
 --[[

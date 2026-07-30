@@ -20,7 +20,9 @@ Five fart colours. That is all, and deliberately so.
 | Solid Gold | 99 | Yellow-gold |
 | Full Spectrum | 149 | Red into blue |
 
-They change the colour of the cloud your fart jump leaves behind. Nothing else.
+They change the colour of **everything you leave behind** -- both the fart jump's
+puff and the dash's trail. One purchase covers both, so a colour somebody paid
+for is never half applied. Nothing else changes.
 
 ## The rule: cosmetic only
 
@@ -206,3 +208,4 @@ any `id` from `Products.luau`.
 |---|---|---|
 | 2026-07-30 | Store built, switched off | Machinery tested and dormant beats untested and live |
 | 2026-07-30 | Five fart colours as the first products | The particles were already config-driven, so these were the closest thing to hand |
+| 2026-07-30 | A colour now covers the dash trail as well as the fart jump | Only recolouring half of what you leave behind reads as broken, not as two separate items |
