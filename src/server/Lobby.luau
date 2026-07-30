@@ -21,6 +21,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 
+local MovementGuard = require(script.Parent.MovementGuard)
+
 local Lobby = {}
 
 local respawnerRunning = false
@@ -240,6 +242,10 @@ function Lobby.sendToLobby(player: Player): boolean
 		character.PrimaryPart.AssemblyLinearVelocity = Vector3.zero
 		character.PrimaryPart.AssemblyAngularVelocity = Vector3.zero
 	end
+
+	-- The server just moved them 600 studs. Without this the movement guard
+	-- would measure that as the fastest anyone has ever travelled.
+	MovementGuard.forgive(player)
 	return ok
 end
 

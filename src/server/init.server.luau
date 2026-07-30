@@ -27,6 +27,7 @@ local GhostArea = require(script.GhostArea)
 local GhostClicker = require(script.GhostClicker)
 local Lobby = require(script.Lobby)
 local Modifiers = require(script.Modifiers)
+local MovementGuard = require(script.MovementGuard)
 local PracticeRange = require(script.PracticeRange)
 local Queue = require(script.Queue)
 local Ragdoll = require(script.Ragdoll)
@@ -92,6 +93,16 @@ Queue.start()
 
 -- Counting, the survive clock, and the numbers in Roblox's player list.
 StatsService.start()
+
+-- Watches for characters covering ground faster than the game allows, which is
+-- the only rule a modified client can actually break -- Roblox gives each player
+-- control of their own character's physics, and that cannot be turned off
+-- without making the dash feel laggy for everybody.
+--
+-- Only acted on inside a live round. There is nothing to gain by cheating in the
+-- lobby, and yanking somebody backwards there would be pure annoyance.
+MovementGuard.setEnforceCheck(RoundManager.isAlive)
+MovementGuard.start()
 
 -- Which ability uses land on the leaderboard. Being ALLOWED to use one and
 -- having it COUNT are deliberately different questions: the lobby practice range

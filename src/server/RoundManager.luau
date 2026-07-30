@@ -24,6 +24,7 @@ local Arena = require(script.Parent.Arena)
 local BrainRot = require(script.Parent.BrainRot)
 local Bomb = require(script.Parent.Bomb)
 local Modifiers = require(script.Parent.Modifiers)
+local MovementGuard = require(script.Parent.MovementGuard)
 local Pickups = require(script.Parent.Pickups)
 local Ragdoll = require(script.Parent.Ragdoll)
 local StatsService = require(script.Parent.StatsService)
@@ -627,6 +628,8 @@ local function spawnEveryone(list: { Player })
 				-- arrived a moment after the character was parented.
 				Ragdoll.setCollisionGroup(character, Ragdoll.LIVE_GROUP)
 			end
+			-- The lobby-to-arena jump is the server's doing, not the player's.
+			MovementGuard.forgive(player)
 			pending -= 1
 		end)
 	end
@@ -961,6 +964,8 @@ local function runRound()
 					if character.PrimaryPart then
 						character.PrimaryPart.AssemblyLinearVelocity = Vector3.zero
 					end
+					-- Brought down 130 studs by the server.
+					MovementGuard.forgive(member)
 				end
 				continue
 			end

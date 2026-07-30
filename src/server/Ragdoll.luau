@@ -27,7 +27,10 @@
 ]]
 
 local PhysicsService = game:GetService("PhysicsService")
+local Players = game:GetService("Players")
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
+
+local MovementGuard = require(script.Parent.MovementGuard)
 
 local Ragdoll = {}
 
@@ -418,6 +421,14 @@ function Ragdoll.shove(character: Model, direction: Vector3, power: number)
 	end
 	local velocity = flat.Unit * power + Vector3.new(0, power * 0.35, 0)
 
+	-- Being tackled is the game moving you, not you moving yourself. Tell the
+	-- movement guard before it happens, or the shove reads as a speed cheat.
+	MovementGuard.allow(
+		Players:GetPlayerFromCharacter(character),
+		power * Config.MOVEMENT_GRANT_HEADROOM,
+		Config.BRAINROT_KNOCKDOWN + 1
+	)
+
 	-- Descendants, not children, so hats and other accessories travel with the
 	-- body rather than being left hanging in the air.
 	for _, part in character:GetDescendants() do
@@ -439,6 +450,14 @@ function Ragdoll.launch(character: Model)
 	end
 	local direction = (horizontal.Unit * Config.LAUNCH_HORIZONTAL + Vector3.yAxis * Config.LAUNCH_VERTICAL).Unit
 	local velocity = direction * Config.LAUNCH_SPEED
+
+	-- An exploded player crosses the arena at 90 studs/s through no fault of
+	-- their own. The grant lasts as long as the body does.
+	MovementGuard.allow(
+		Players:GetPlayerFromCharacter(character),
+		Config.LAUNCH_SPEED * Config.MOVEMENT_GRANT_HEADROOM,
+		Config.CORPSE_LIFETIME + 1
+	)
 
 	for _, part in character:GetDescendants() do
 		if not part:IsA("BasePart") then

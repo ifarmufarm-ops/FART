@@ -528,6 +528,56 @@ Config.BRAINROT_REPATH_INTERVAL = 0.8
 Config.BRAINROT_FACE = "rbxasset://textures/face.png"
 
 --=============================================================================
+-- MOVEMENT GUARD  (the one thing a cheat can actually do)
+--=============================================================================
+-- Every rule in this game is decided on the server and cannot be lied to --
+-- who has the bomb, whether a pass happened, whether an ability may be used.
+-- Movement is the single exception: Roblox gives each player's own machine
+-- control of their character, which is what makes the dash feel instant, and
+-- the price is that a modified client can move itself however it likes.
+--
+-- So the server watches where people actually are and flags anybody covering
+-- ground faster than the game allows.
+
+Config.MOVEMENT_GUARD_ENABLED = true
+
+-- SNAPPING BACK IS OFF TO BEGIN WITH, deliberately.
+--
+-- With this false the guard only watches and writes to the output. Play a few
+-- real rounds like that first and see whether anything honest trips it -- a
+-- laggy player being yanked backwards is a far worse bug than a cheater getting
+-- away with it for another week. Turn it on once the log stays quiet.
+Config.MOVEMENT_CORRECT = false
+Config.MOVEMENT_LOG = true
+
+-- How often each player's position is checked. Every quarter second is plenty:
+-- a cheater has to keep it up to gain anything, and checking more often mostly
+-- measures network jitter.
+Config.MOVEMENT_CHECK_INTERVAL = 0.25
+
+-- How much faster than legal is still forgiven, and a flat allowance on top.
+-- Both exist for honest reasons -- running downhill, being shoved by another
+-- player, and lag arriving late then catching up all at once.
+Config.MOVEMENT_TOLERANCE = 1.6
+Config.MOVEMENT_MARGIN = 10
+
+-- Ground covered in one check that is a teleport rather than running. A dash at
+-- 85 studs/s covers about 21 in a quarter second, and an explosion launch about
+-- the same, so this is comfortably clear of anything legitimate.
+Config.MOVEMENT_TELEPORT_STUDS = 60
+
+-- How many flags before acting, and how long a flag stays on the record. One
+-- odd reading in a lag spike should not sit there waiting for two more.
+Config.MOVEMENT_STRIKES = 3
+Config.MOVEMENT_STRIKE_WINDOW = 10
+
+-- When the game itself flings somebody -- a dash, an explosion, the NPC's
+-- tackle -- it tells the guard how fast they are about to travel. This multiplies
+-- that figure, because a launch bounces and a dash slides, so the real peak is
+-- a little above the number the game asked for.
+Config.MOVEMENT_GRANT_HEADROOM = 1.6
+
+--=============================================================================
 -- STATS AND LEADERBOARDS
 --=============================================================================
 -- What the game counts, and what it shows for it. The catalogue of statistics

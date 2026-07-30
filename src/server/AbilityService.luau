@@ -24,6 +24,7 @@ local Abilities = require(ReplicatedStorage.Shared.Abilities)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local MovementGuard = require(script.Parent.MovementGuard)
 local Ragdoll = require(script.Parent.Ragdoll)
 local StatsService = require(script.Parent.StatsService)
 
@@ -391,6 +392,26 @@ local function onRequest(player: Player, requestKind: any)
 	-- ever entering a round. See Config.COUNT_PRACTICE_ABILITIES.
 	if shouldCount(player) then
 		StatsService.add(player, "AbilityUses", 1)
+	end
+
+	-- Tell the movement guard this player is about to move fast on purpose, or
+	-- every legitimate dash reads as a speed cheat.
+	--
+	-- TWO permissions, not one. The burst is brief and very fast. The slide it
+	-- hands over to is slower but can start MUCH later, because dashing off a
+	-- ledge waits until you land -- so a single short permission would expire in
+	-- mid-air and flag the landing. The slower one covers the fall as well.
+	if abilityId == "Dash" then
+		MovementGuard.allow(
+			player,
+			Config.DASH_SPEED * Config.MOVEMENT_GRANT_HEADROOM,
+			Config.DASH_DURATION + 0.5
+		)
+		MovementGuard.allow(
+			player,
+			Config.DASH_SPEED * Config.DASH_GLIDE_STRENGTH * Config.MOVEMENT_GRANT_HEADROOM,
+			Config.DASH_DURATION + Config.DASH_TRAIL_MAX + Config.DASH_GLIDE_DURATION + 0.5
+		)
 	end
 
 	if abilityId == "Sneakers" then
