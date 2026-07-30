@@ -189,6 +189,21 @@ Remotes.LeaveRound.OnServerEvent:Connect(function(player)
 	end
 end)
 
+--[[
+	On the way down, save everybody's progress -- and WAIT for it.
+
+	The order matters. Closing the survive clocks first banks the round that is
+	still running; saving first would write everything except that. And this is
+	waited on rather than fired off, because a shutdown that does not wait loses
+	up to a full save interval plus the whole current round, which players
+	experience as their numbers going backwards. That is the most
+	trust-destroying thing a leaderboard can do.
+]]
+game:BindToClose(function()
+	StatsService.endRoundAll()
+	StatsService.flushAll()
+end)
+
 RoundManager.start()
 
 print("[Hot Potato] Server ready.")

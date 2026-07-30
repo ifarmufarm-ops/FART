@@ -21,12 +21,28 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Stats = require(ReplicatedStorage.Shared.Stats)
 
+local StatsStore = require(script.Parent.StatsStore)
+
 local StatsService = {}
 
 -- Every player's running totals. Kept as floats: survive time accrues in
 -- fractions of a second, and flooring on every elimination would quietly lose
 -- up to a second per round per player.
 local totals: { [Player]: { [string]: number } } = {}
+
+-- What has changed since their last successful save. Saves send this rather
+-- than the whole total, so two servers holding the same player add up instead of
+-- overwriting each other. Cleared only once a write definitely landed.
+local pending: { [Player]: { [string]: number } } = {}
+
+-- Players whose history could not be read. They play with zeros and are NEVER
+-- written back -- see the note at the top of StatsStore. This is the flag that
+-- stops a data outage erasing somebody's progress.
+local failedToLoad: { [Player]: boolean } = {}
+
+-- Guards against two saves for the same player running at once, which would
+-- double-count the pending changes.
+local saving: { [Player]: boolean } = {}
 
 -- When each player's survive clock started, for those currently alive in a
 -- round. Absent means the clock is not running.
@@ -70,6 +86,15 @@ function StatsService.add(player: Player?, statId: string, delta: number)
 
 	local profile = profileOf(player)
 	profile[statId] += delta
+
+	-- Remember it for the next save as well as for right now.
+	local queue = pending[player]
+	if not queue then
+		queue = {}
+		pending[player] = queue
+	end
+	queue[statId] = (queue[statId] or 0) + delta
+
 	log(("%s  %s +%s  ->  %s"):format(player.Name, statId, tostring(delta), tostring(profile[statId])))
 end
 
@@ -80,6 +105,75 @@ end
 
 function StatsService.getAll(player: Player): { [string]: number }
 	return table.clone(profileOf(player))
+end
+
+--=============================================================================
+-- SAVING
+--=============================================================================
+
+--[[
+	Writes one player's outstanding changes.
+
+	Refuses in two cases, both deliberately: their history failed to load (so
+	writing would replace it with zeros), or a save for them is already running
+	(so the same changes would be counted twice).
+]]
+function StatsService.flush(player: Player): boolean
+	if failedToLoad[player] then
+		return false
+	end
+	if saving[player] then
+		return false
+	end
+
+	local queue = pending[player]
+	if not queue or next(queue) == nil then
+		return true
+	end
+
+	-- Take the changes out and hand them over. If the write fails they are put
+	-- back, so nothing is lost -- it just goes out with the next attempt.
+	pending[player] = {}
+	saving[player] = true
+
+	local userId = player.UserId
+	local ok = StatsStore.flush(userId, queue)
+
+	saving[player] = nil
+
+	if not ok then
+		local queueAgain = pending[player] or {}
+		for id, amount in queue do
+			queueAgain[id] = (queueAgain[id] or 0) + amount
+		end
+		pending[player] = queueAgain
+		log(("save failed for %s; %d change(s) held for next time"):format(player.Name, #Stats.ids()))
+	end
+	return ok
+end
+
+--[[
+	Everybody, at once, waited on. Used when the server is shutting down.
+
+	Each player is saved in parallel because they are separate writes, but the
+	whole thing is waited on with a deadline -- fire-and-forget here is what makes
+	numbers go backwards after a restart.
+]]
+function StatsService.flushAll()
+	local outstanding = 0
+	for _, player in Players:GetPlayers() do
+		outstanding += 1
+		task.spawn(function()
+			StatsService.flush(player)
+			outstanding -= 1
+		end)
+	end
+
+	local giveUpAt = os.clock() + Config.STATS_SHUTDOWN_WAIT
+	while outstanding > 0 and os.clock() < giveUpAt do
+		task.wait(0.1)
+	end
+	log(("flushAll finished with %d still outstanding"):format(outstanding))
 end
 
 --=============================================================================
@@ -239,15 +333,42 @@ function StatsService.start()
 	end
 	running = true
 
+	StatsStore.init()
+
 	local function watch(player: Player)
-		profileOf(player)
+		-- Load first, so their real totals are in place before anything can be
+		-- added to them. Loading yields, so a player who does something in that
+		-- window would otherwise have it added to zeros and then overwritten.
+		local stored, loadedCleanly = StatsStore.load(player.UserId)
+
+		if not loadedCleanly then
+			failedToLoad[player] = true
+			warn(("[Stats] %s plays this session without saving -- their history could not be read")
+				:format(player.Name))
+		end
+
+		local profile = profileOf(player)
+		for _, id in Stats.ids() do
+			profile[id] = stored.totals[id] or 0
+		end
+		-- Anything counted while the load was in flight still counts; it is
+		-- already in `pending` and gets added on top rather than lost.
+		local queue = pending[player]
+		if queue then
+			for id, amount in queue do
+				profile[id] = (profile[id] or 0) + amount
+			end
+		end
+
 		buildLeaderstats(player)
 	end
 
-	Players.PlayerAdded:Connect(watch)
+	Players.PlayerAdded:Connect(function(player)
+		task.spawn(watch, player) -- loading yields; do not hold up the join
+	end)
 	-- Anybody who joined in the moment before that connection was made.
 	for _, player in Players:GetPlayers() do
-		watch(player)
+		task.spawn(watch, player)
 	end
 
 	--[[
@@ -259,12 +380,36 @@ function StatsService.start()
 		single disconnect. Closing it here, first, removes the question.
 	]]
 	Players.PlayerRemoving:Connect(function(player)
+		-- Clock first, then save, then forget. In that order: banking the clock
+		-- after the save would write everything except their last stretch of
+		-- survive time, on every single disconnect.
 		StatsService.endRound(player)
 		log(("%s left with %s"):format(player.Name, Stats.format("SurviveSeconds", StatsService.get(player, "SurviveSeconds"))))
-		-- Stage 2 flushes to the datastore here, before dropping the profile.
+		StatsService.flush(player)
+
 		totals[player] = nil
+		pending[player] = nil
+		failedToLoad[player] = nil
+		saving[player] = nil
 		clockFrom[player] = nil
 		leaderstatValues[player] = nil
+	end)
+
+	--[[
+		Routine saving. Each player's turn is spread out by their user id so ten
+		of them do not all write in the same second, which is what runs a server
+		into the request limit.
+	]]
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			local slot = os.time() % Config.STATS_FLUSH_SECONDS
+			for _, player in Players:GetPlayers() do
+				if player.UserId % Config.STATS_FLUSH_SECONDS == slot then
+					task.spawn(StatsService.flush, player)
+				end
+			end
+		end
 	end)
 
 	task.spawn(function()

@@ -630,6 +630,47 @@ Config.STATS_REFRESH_SECONDS = 1
 Config.CLICKER_MIN_PUNCH_INTERVAL = 0.15
 
 --=============================================================================
+-- SAVING THE STATS
+--=============================================================================
+-- This is the first thing in the project that can lose something a player
+-- earned and cannot get back. Everything else here, if it breaks, produces a
+-- funny explosion.
+--
+-- Studio ALWAYS uses a separate save file with "_studio" on the end of its name,
+-- so playtesting can never touch a real player's history. That means you can
+-- test saving properly without risking anything -- but Studio has to be allowed
+-- to reach the service at all first:
+--
+--     Game Settings -> Security -> Enable Studio Access to API Services
+--
+-- With that off, the game runs perfectly and simply does not save, and says so
+-- once in the output rather than filling it with errors.
+
+Config.STATS_SAVE_ENABLED = true
+
+-- The name of the save file. The version number is part of it deliberately: if
+-- the shape of what we store ever has to change, bumping this starts clean
+-- rather than trying to repair half-old data.
+Config.STATS_STORE_NAME = "HotPotatoStats_v1"
+
+-- How often each player's progress is written, in seconds. Nothing is written
+-- per punch or per pass -- those add up in memory and go out together. Each
+-- player's turn is staggered so ten of them do not all write in the same second.
+Config.STATS_FLUSH_SECONDS = 60
+
+-- How many times to retry a failed load, and the first gap between tries (it
+-- doubles each time: 1, 2, 4, 8). Getting this wrong is the worst thing that can
+-- happen here, so it tries hard before giving up.
+Config.STATS_LOAD_ATTEMPTS = 4
+Config.STATS_RETRY_BASE = 1
+
+-- How long the server waits on its way down for everybody's progress to finish
+-- saving. Without this, shutting down loses up to a whole flush interval, and
+-- players see their numbers go backwards -- the most trust-destroying thing a
+-- leaderboard can do.
+Config.STATS_SHUTDOWN_WAIT = 25
+
+--=============================================================================
 -- SOUNDS
 --=============================================================================
 -- These "rbxasset://" paths are built into every Roblox client, so they always

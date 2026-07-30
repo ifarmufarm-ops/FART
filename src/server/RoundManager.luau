@@ -905,6 +905,14 @@ local function runRound()
 	-- through to this line.
 	StatsService.endRoundAll()
 
+	-- A natural checkpoint: a whole round's worth of survive time has just been
+	-- banked, so get it written rather than waiting for the routine save.
+	for _, member in roundMembers do
+		if member.Parent == Players then
+			task.spawn(StatsService.flush, member)
+		end
+	end
+
 	Bomb.detach()
 	holder = nil
 	duration = 0
