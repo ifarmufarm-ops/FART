@@ -16,9 +16,30 @@
 		Shared/Abilities  the catalogue of what can spawn as a pickup
 ]]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+--[[
+	THE VERY FIRST THING, before a single part is built.
+
+	This game hands out every body itself. Until this line runs, Roblox is still
+	spawning players on its own -- and a player who joins in that window has a
+	problem: the arena's spawn pads exist but are deliberately disabled, and the
+	lobby's have not been built yet. With no enabled spawn point anywhere, Roblox
+	drops the character at the world origin, which is the middle of the arena.
+
+	They then have a body, so the lobby's respawner -- which only rescues players
+	who have none -- leaves them alone; and they are not queued, so no round ever
+	claims them. The result is a player stranded in the arena, unable to play,
+	unable to leave, and unable to be passed the bomb. Seen with three clients
+	joining at once, where it hit exactly one of them.
+
+	Setting this before anything else closes the window. RoundManager sets it
+	again for its own reasons; setting it twice costs nothing.
+]]
+Players.CharacterAutoLoads = false
 
 local AbilityService = require(script.AbilityService)
 local Arena = require(script.Arena)
@@ -173,6 +194,20 @@ Lobby.startRespawner(function(player)
 		return true
 	end
 	return RoundManager.isInRound(player)
+end, function(player: Player): boolean
+	-- Who is allowed to be standing in the arena. Anyone in a round, anyone in
+	-- the free-for-all between rounds, and any ghost -- they are above it rather
+	-- than in it, but they are not stranded either. Everybody else found down
+	-- there is put back in the lobby.
+	if GhostArea.isGhost(player) then
+		return true
+	end
+	for _, allowed in RoundManager.getArenaPlayers() do
+		if allowed == player then
+			return true
+		end
+	end
+	return false
 end)
 
 -- "Back to the lobby", pressed by a player who has been blown up.

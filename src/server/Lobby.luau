@@ -270,11 +270,48 @@ end
 	body right now -- eliminated, mid-round, watching the end of the game -- and
 	who must be left alone rather than yanked back to the lobby.
 ]]
-function Lobby.startRespawner(shouldWait: (Player) -> boolean)
+function Lobby.startRespawner(shouldWait: (Player) -> boolean, belongsInArena: ((Player) -> boolean)?)
 	if respawnerRunning then
 		return
 	end
 	respawnerRunning = true
+
+	--[[
+		Is this player standing in the arena when they have no business being
+		there?
+
+		The respawner above only rescues players with NO body, so somebody who
+		ends up in the arena with a perfectly good one is invisible to it. That
+		has happened: before auto-spawning was switched off early enough, a
+		player joining at the wrong moment was dropped at the world origin -- the
+		middle of the arena -- and simply stayed there, unable to play or leave.
+
+		`belongsInArena` is what stops this yanking honest players out. Everybody
+		in a round, and everybody in the free-for-all between rounds, legitimately
+		belongs there.
+	]]
+	local function isStranded(player: Player): boolean
+		if not belongsInArena or belongsInArena(player) then
+			return false
+		end
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if not root or not root:IsA("BasePart") then
+			return false
+		end
+
+		local position = root.Position
+		-- The ghost platform sits directly above the arena, so height is what
+		-- tells the two apart.
+		if position.Y > CENTER.Y + Config.GHOST_HEIGHT - 40 then
+			return false
+		end
+
+		local flat = Vector3.new(position.X, 0, position.Z)
+		local toLobby = (flat - Vector3.new(CENTER.X, 0, CENTER.Z)).Magnitude
+		local toArena = (flat - Vector3.new(Config.ARENA_CENTER.X, 0, Config.ARENA_CENTER.Z)).Magnitude
+		return toArena < toLobby
+	end
 
 	local function needsBody(player: Player): boolean
 		local character = player.Character
@@ -294,6 +331,12 @@ function Lobby.startRespawner(shouldWait: (Player) -> boolean)
 				if player.Parent ~= Players then
 					continue
 				end
+				-- Has a body, but is standing somewhere they should not be.
+				if isStranded(player) then
+					Lobby.sendToLobby(player)
+					continue
+				end
+
 				if not needsBody(player) or shouldWait(player) then
 					continue
 				end
