@@ -577,6 +577,25 @@ Config.MOVEMENT_STRIKE_WINDOW = 10
 -- a little above the number the game asked for.
 Config.MOVEMENT_GRANT_HEADROOM = 1.6
 
+-- HOW LONG A DASH'S MOMENTUM IS FORGIVEN FOR.
+--
+-- A dash does not just end. Jump straight after one and you are in the air with
+-- no friction at all, keeping the full 85 studs/s until you land -- and Low
+-- Gravity makes that hang time roughly two and a half times longer. Land on Ice
+-- Shoes and you keep most of it again while you slide.
+--
+-- So a dash buys the full dash speed for this long, not the slower slide speed
+-- for a moment. Anything less and a player chaining a dash into a jump onto ice
+-- -- ordinary, skilful play -- gets flagged as a cheat.
+--
+-- The trade: somebody with a dash charge could travel fast for this long
+-- without being flagged. That is deliberate. Sustained speed is not the
+-- dangerous cheat in this game -- you still have to touch somebody to pass the
+-- bomb, and the holder is faster than everyone anyway. The cheat that actually
+-- wins games is appearing next to someone instantly, and that is caught by
+-- MOVEMENT_TELEPORT_STUDS regardless of any permission.
+Config.MOVEMENT_MOMENTUM_SECONDS = 6
+
 --=============================================================================
 -- STATS AND LEADERBOARDS
 --=============================================================================

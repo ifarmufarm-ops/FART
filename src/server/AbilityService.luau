@@ -397,20 +397,19 @@ local function onRequest(player: Player, requestKind: any)
 	-- Tell the movement guard this player is about to move fast on purpose, or
 	-- every legitimate dash reads as a speed cheat.
 	--
-	-- TWO permissions, not one. The burst is brief and very fast. The slide it
-	-- hands over to is slower but can start MUCH later, because dashing off a
-	-- ledge waits until you land -- so a single short permission would expire in
-	-- mid-air and flag the landing. The slower one covers the fall as well.
+	-- A dash's momentum outlives the dash itself, and by a lot. Jump straight
+	-- after one and there is no friction to slow you, so you keep the full dash
+	-- speed until you land -- longer still under Low Gravity -- and landing on
+	-- Ice Shoes keeps most of it again while you slide.
+	--
+	-- So this grants FULL dash speed for a good while rather than the slower
+	-- slide speed for a moment. See Config.MOVEMENT_MOMENTUM_SECONDS for why
+	-- that trade is the right way round.
 	if abilityId == "Dash" then
 		MovementGuard.allow(
 			player,
 			Config.DASH_SPEED * Config.MOVEMENT_GRANT_HEADROOM,
-			Config.DASH_DURATION + 0.5
-		)
-		MovementGuard.allow(
-			player,
-			Config.DASH_SPEED * Config.DASH_GLIDE_STRENGTH * Config.MOVEMENT_GRANT_HEADROOM,
-			Config.DASH_DURATION + Config.DASH_TRAIL_MAX + Config.DASH_GLIDE_DURATION + 0.5
+			Config.MOVEMENT_MOMENTUM_SECONDS
 		)
 	end
 
