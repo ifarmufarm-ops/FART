@@ -15,7 +15,7 @@ Five fart colours. That is all, and deliberately so.
 | Colour | Suggested price | Looks like |
 |---|---|---|
 | Classic Green | 25 | The original |
-| Bubblegum | 25 | Bright pink |
+| Bubblegum | 25 | Bright pink — **plus extra effects**, see below |
 | Deep Freeze | 25 | Pale blue |
 | Solid Gold | 99 | Yellow-gold |
 | Full Spectrum | 149 | Red into blue |
@@ -23,6 +23,29 @@ Five fart colours. That is all, and deliberately so.
 They change the colour of **everything you leave behind** -- both the fart jump's
 puff and the dash's trail. One purchase covers both, so a colour somebody paid
 for is never half applied. Nothing else changes.
+
+## Bubblegum gets more than a recolour
+
+The other four change colour and nothing else. Bubblegum is the showpiece, to see
+whether a visibly fancier item is worth building more of. On top of the ordinary
+cloud it gets four layers:
+
+| Layer | What it does |
+|---|---|
+| **Bubbles** | Big, nearly see-through, and they **rise** instead of billowing — that one property is what makes them read as bubbles rather than exhaust |
+| **Glitter** | Tiny bright sparks thrown outwards, gone in half a second. This is the layer that makes it look expensive |
+| **Shockwave** | A ring blown outwards and faded in a quarter of a second, on the jump only. The dash gets a stream instead, since it paints a path rather than marking one spot |
+| **Pink flash** | A light that blooms and dies, so the burst lights its surroundings for an instant instead of looking like a flat sticker |
+
+All built from what Roblox ships — nothing to upload.
+
+**Adding a fancy one later** is a two-line job: give the product a
+`vfx = "SomeName"` in `Products.luau`, and add a branch for that name in
+`src/server/CosmeticVfx.luau`. Anything without a `vfx` stays a plain recolour,
+so the other four are untouched.
+
+Every number is a dial in `Config.luau` under **BUBBLEGUM'S EXTRA EFFECTS**, and
+`COSMETIC_VFX_ENABLED = false` turns the whole thing off to compare.
 
 ## The rule: cosmetic only
 

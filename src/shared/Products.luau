@@ -41,6 +41,11 @@ export type Product = {
 	-- behind rather than only half of it.
 	colorFrom: Color3,
 	colorTo: Color3,
+	-- Optional. Names a bespoke effect in src/server/CosmeticVfx.luau, layered on
+	-- top of the ordinary cloud. Left out and you get the plain recolour, which is
+	-- what most of these are: a premium one can earn something extra without
+	-- every entry needing its own code.
+	vfx: string?,
 }
 
 local Products = {}
@@ -59,10 +64,13 @@ Products.list = {
 		id = "PinkFart",
 		productId = 0,
 		name = "Bubblegum",
-		blurb = "Suspiciously sweet.",
+		blurb = "Suspiciously sweet. Blows real bubbles.",
 		price = 25,
 		colorFrom = Color3.fromRGB(255, 158, 222),
 		colorTo = Color3.fromRGB(196, 74, 160),
+		-- The showpiece. Gets actual bubbles, glitter, a shockwave ring and a
+		-- pink flash on top of the ordinary cloud. See CosmeticVfx.luau.
+		vfx = "Bubblegum",
 	},
 	{
 		id = "BlueFart",

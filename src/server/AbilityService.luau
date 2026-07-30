@@ -26,6 +26,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local Products = require(ReplicatedStorage.Shared.Products)
 
+local CosmeticVfx = require(script.Parent.CosmeticVfx)
 local MovementGuard = require(script.Parent.MovementGuard)
 local Purchases = require(script.Parent.Purchases)
 local Ragdoll = require(script.Parent.Ragdoll)
@@ -275,6 +276,10 @@ local function dashSmoke(root: BasePart)
 		smoke.Rate = 0
 	end)
 	Debris:AddItem(attachment, Config.DASH_TRAIL_MAX + Config.DASH_TRAIL_LINGER + 2.5)
+
+	if dashOwner then
+		CosmeticVfx.apply("Dash", root, Purchases.getEquipped(dashOwner))
+	end
 end
 
 --[[
@@ -329,6 +334,11 @@ local function fartPuff(root: BasePart)
 
 	puff:Emit(Config.FART_PUFF_PARTICLES)
 	Debris:AddItem(attachment, 3)
+
+	-- A premium cosmetic gets more than a recolour. Does nothing for the others.
+	if owner then
+		CosmeticVfx.apply("Jump", root, Purchases.getEquipped(owner))
+	end
 end
 
 local function playUseEffects(character: Model, abilityId: string)

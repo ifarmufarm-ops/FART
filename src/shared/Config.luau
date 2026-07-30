@@ -712,6 +712,41 @@ Config.STATS_SHUTDOWN_WAIT = 25
 -- spending rather than skill.
 Config.PRODUCTS_ENABLED = false
 
+--=============================================================================
+-- BUBBLEGUM'S EXTRA EFFECTS
+--=============================================================================
+-- Most cosmetics are a recolour. Bubblegum is the showpiece: real bubbles that
+-- rise, a burst of glitter, a shockwave ring and a pink flash, layered on top of
+-- the ordinary cloud. Built entirely from what Roblox ships, so there is nothing
+-- to upload. See src/server/CosmeticVfx.luau.
+--
+-- Turn this off to see every cosmetic behave as a plain recolour again.
+Config.COSMETIC_VFX_ENABLED = true
+
+-- THE BUBBLES. Rise is what makes them read as bubbles rather than exhaust --
+-- smoke billows outwards, a bubble goes up and hangs about.
+Config.GUM_BUBBLE_SIZE = 3.2
+Config.GUM_BUBBLE_LIFETIME = 2.2
+Config.GUM_BUBBLE_RISE = 7 -- studs per second, upwards
+Config.GUM_BUBBLE_BURST = 26 -- how many the jump throws out at once
+Config.GUM_BUBBLE_TRAIL_RATE = 34 -- per second while dashing
+
+-- THE GLITTER. Small, bright and quick: it catches the eye for a fraction of a
+-- second, which is most of what makes an effect feel expensive.
+Config.GUM_GLITTER_SIZE = 0.9
+Config.GUM_GLITTER_BURST = 40
+Config.GUM_GLITTER_TRAIL_RATE = 70
+
+-- THE SHOCKWAVE RING. How big it grows and how long it takes. Quick and wide
+-- reads as a pop; slow and small reads as a mistake.
+Config.GUM_RING_SIZE = 15
+Config.GUM_RING_TIME = 0.28
+
+-- THE FLASH, so the burst lights its own surroundings for an instant.
+Config.GUM_FLASH_BRIGHTNESS = 9
+Config.GUM_FLASH_RANGE = 20
+Config.GUM_FLASH_TIME = 0.35
+
 -- THE SHOP. A row of pedestals along one lobby wall, one per colour. Walk onto
 -- one to buy it, or to wear it if you already own it. See STORE.md.
 Config.SHOP_SPACING = 14 -- gap between pedestals, in studs
