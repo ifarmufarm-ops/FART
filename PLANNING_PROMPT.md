@@ -24,6 +24,9 @@ Read these first, in this order, before asking me anything or proposing work:
   8. git log              -- the commit messages explain the whole build,
                              including what was measured and what was not
 
+Keep your replies short. Tell me what changed, what you measured, and what is
+still unknown. I do not need the walkthrough.
+
 Then tell me, briefly:
   - what you understand the current state to be
   - what the agreed next step is
