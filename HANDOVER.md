@@ -14,9 +14,26 @@ explains *where we are*.
 Hot Potato Bomb is a round-based Roblox party game, and the whole loop is built:
 a lobby with a queue pad, an arena, a free-for-all between rounds, a ghost area
 for knocked-out players, abilities and beacon events, persistent stats with
-global leaderboards, an anti-cheat movement check, and a cosmetic store. Nothing
-is published. **Nobody has ever played it for fun** -- every test so far has been
+global leaderboards, an anti-cheat movement check, and a cosmetic store with
+seven fart colours, three of which have elaborate bespoke effects. Nothing is
+published. **Nobody has ever played it for fun** -- every test so far has been
 "does this work", not "is this good".
+
+## THE AGREED NEXT PIECE OF WORK
+
+**A map pass.** Moving off the code-generated arena and lobby onto hand-built
+geometry. `MAP_INTEGRATION.md` is written, current, and is where to start.
+
+UI work is explicitly **paused** -- do not start a shop screen, a stats panel or
+any other interface unless asked. Everything player-facing today is built out of
+things in the world (pads you walk onto, signs on walls), and that is working.
+
+Two things already make a hand-built map a drop-in replacement, both by design:
+the arena's floor and pickup zones are found by tag, and so are the leaderboard
+signs. Neither needs code changes -- build it, tag it, and the generated
+placeholder stops being created. `MAP_INTEGRATION.md` lists what is still
+hardcoded and must be dealt with: spawn points, the NPC's spawn, the showcase
+range's position and the spectator camera.
 
 ---
 
@@ -74,27 +91,35 @@ Kept deliberately, so nobody assumes these are proven.
 - Whether any of it is fun. Whether the final duel is tense or abrupt. Whether
   the lobby is the right size now. Whether the boards read well. Numbers cannot
   answer any of these
+- **How the three fancy cosmetics actually look.** Bubblegum, "???" and "!!!"
+  are verified only by counting the instances they create. Screen capture cannot
+  catch them mid-effect, because the client resets the camera to follow the
+  character every frame. Somebody has to equip each at the shop and jump and dash
+- Whether the practice range really goes quiet when nobody is near it. The test
+  was defeated by the stranded-player safety net putting the tester back in the
+  lobby. It fails safe either way
 
 ---
 
 ## What to do next
 
-In the order I would do it:
+**Elias has asked for a map pass next, with UI work paused.** That is the
+instruction; start there.
 
-1. **Publish privately and play with four or five people for twenty minutes.**
+The rest, roughly in the order I would do it:
+
+1. **Swap the four placeholder assets**, so a playtest is not judged on Roblox's
+   default smiley face and a jump sound standing in for a fart. Elias's job.
+2. **Publish privately and play with four or five people for twenty minutes.**
    Everything else is guesswork until this happens. The loop has been stable for
    a while and there is now a shop and leaderboards to give a session shape.
-2. **Swap the four placeholder assets**, so a playtest is not judged on Roblox's
-   default smiley face and a jump sound standing in for a fart.
 3. **Turn on `MOVEMENT_CORRECT`** once real rounds have run and the output stays
    free of `[MovementGuard]` lines.
-4. **Real maps.** `MAP_INTEGRATION.md` is written and current. Biggest visual
-   jump for the least gameplay risk. Both the boards and the lobby geometry are
-   already tag-driven, so hand-built replacements need no code change.
-5. **The obby.** Sketched in `LOBBY_PLAN.md`, never planned properly.
+4. **The obby.** Sketched in `LOBBY_PLAN.md`, never planned properly.
 
-Elias has said he does not want to test or build maps for a while, so expect
-small feature and feel requests rather than big pushes.
+Expect small feel-and-polish requests between the bigger pieces. That has been
+the pattern, and it works well: he plays, notices something, describes it in
+plain language, and it usually turns out to be a real bug.
 
 ---
 
@@ -153,6 +178,21 @@ cost real time in this project, twice each:
   playtesting can never touch real player data.
 - Screenshots via the Studio MCP tools time out fairly often. Fall back to
   reading state numerically and say plainly that you could not look at it.
+
+## Two things that are easy to get wrong
+
+**Anything decorative that moves should move on the client.** The pickups used to
+spin on the server, which sent fourteen parts' positions to every player sixty
+times a second for something purely cosmetic. `src/client/PickupSpin.luau` is the
+pattern: every machine works the motion out from the clock, so it costs nothing
+to send, and the server keeps whatever the rules actually depend on. If a map
+pass adds moving scenery, do it the same way.
+
+**A runtime toggle must live in a real Instance, not a variable.** Calling
+`require()` from Studio's command bar gives a separate copy of a module, so a
+variable set there is not the one the running game reads --  producing a
+half-working result where existing objects change and new ones come back wrong.
+`Pickups.iconsThroughWalls` is the pattern to copy.
 
 ## The one thing to be careful with
 
